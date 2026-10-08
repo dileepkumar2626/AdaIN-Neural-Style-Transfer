@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.*
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Logs
+*.log
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ML / Deep Learning
+checkpoints/
+runs/
+logs/
+wandb/
+tensorboard/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+
+# Large datasets
+data/
+datasets/
+*.csv
+*.zip
+*.tar
+*.tar.gz
+
+# Model cache
+.cache/
+huggingface_cache/
+transformers_cache/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Secrets
+*.pem
+*.key
+credentials.json
+service-account.json
