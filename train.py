@@ -10,8 +10,8 @@ from torchvision.utils import save_image
 
 def parse_arguments():
     parser=argparse.ArgumentParser()
-    parser.add_argument("--content_dir",type=str,default="",help="Location of content Dataset")
-    parser.add_argument("--style_dir",type=str,default="",help="Location of content dataset")
+    parser.add_argument("--content_dir",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/data/content_data",help="Location of content Dataset")
+    parser.add_argument("--style_dir",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/data/style_data",help="Location of content dataset")
     parser.add_argument("--vgg",type=str,default="",help="Location of pre-trained VGG")
     parser.add_argument("--experiment",type=str,default="experiment1",help="Name of experiment")
     parser.add_argument("--final_size",type=int,default=256,help="Size of final image")
