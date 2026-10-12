@@ -1,15 +1,15 @@
 from torch.utils.data import Dataset
 import os 
-from PIL import Image
+from PIL import Image,ImageFile
 from torchvision import transforms
-
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 class ImageFolderdataset(Dataset):
     def __init__(self,root,transform=None):
         super(ImageFolderdataset).__init__()
         self.root=root
         self.transform=transform
         self.files=list(os.listdir(root))
-        self.files=[p for p in self.files if p.endswith((".jpg",".jpeg",".png"))]
+        self.files=([p for p in self.files if p.endswith((".jpg",".jpeg",".png"))])[:10000]
     def __len__(self):
         return len(self.files)
 

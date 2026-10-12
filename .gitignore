@@ -48,6 +48,7 @@ tensorboard/
 *.pt
 *.ckpt
 *.onnx
+*.png
 
 # Large datasets
 data/

@@ -6,22 +6,23 @@ from pathlib import Path
 from utils.utils import *
 from utils.models import *
 from tqdm import tqdm
+from PIL import Image,ImageFile
 from torchvision.utils import save_image
-
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 def parse_arguments():
     parser=argparse.ArgumentParser()
-    parser.add_argument("--content_dir",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/data/content_data",help="Location of content Dataset")
-    parser.add_argument("--style_dir",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/data/style_data",help="Location of content dataset")
-    parser.add_argument("--vgg",type=str,default="",help="Location of pre-trained VGG")
+    parser.add_argument("--content_dir",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/data/test2017",help="Location of content Dataset")
+    parser.add_argument("--style_dir",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/data/train_1",help="Location of content dataset")
+    parser.add_argument("--vgg",type=str,default="C:/Users/Dileep Kumar/Desktop/AdaIN-Neural-Style-Transfer/vgg_normalised.pth",help="Location of pre-trained VGG")
     parser.add_argument("--experiment",type=str,default="experiment1",help="Name of experiment")
     parser.add_argument("--final_size",type=int,default=256,help="Size of final image")
     parser.add_argument("--content_size",type=int,default=512,help="Size of content image")
     parser.add_argument("--style_size",type=int,default=512,help="Size of style image ")
-    parser.add_argument("crop",action="store_ture",default=True,help="Crop image ")
+    parser.add_argument("crop",action="store_true",default=True,help="Crop image ")
     parser.add_argument("--batch_size",type=int ,default=4,help="Batch size")
     parser.add_argument('--lr', type=float, default=1e-4,help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=5e-5,help='Learning rate decay')
-    parser.add_argument('--epochs', type=int, default=1,help='Number of epochs')
+    parser.add_argument('--epochs', type=int, default=10,help='Number of epochs')
     parser.add_argument('--content_weight', type=float, default=1.0,help='Content weight')
     parser.add_argument('--style_weight', type=float, default=5,help='Style weight')
     parser.add_argument('--log_interval', type=int, default=1,help='Log interval')
