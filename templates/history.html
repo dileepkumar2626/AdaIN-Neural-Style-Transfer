@@ -1,107 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>My History | AdaIN Style Transfer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh;
+            background-image: radial-gradient(circle at 15% 10%, rgba(99,102,241,.18), transparent 40%), radial-gradient(circle at 85% 90%, rgba(168,85,247,.16), transparent 40%);
+            opacity: 0; transition: opacity .35s ease; }
+        body.page-ready { opacity: 1; } body.page-leaving { opacity: 0; }
+        .app-nav { background: rgba(15,23,42,.85); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        h1.title { font-family: 'Orbitron', sans-serif; font-weight: 700; background: linear-gradient(90deg,#818cf8,#c084fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .toolbar { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 14px; }
+        .form-control, .form-select { background: rgba(15,23,42,.8); border-color: #334155; color: #e2e8f0; }
+        .form-control:focus, .form-select:focus { background: rgba(15,23,42,.95); color: #fff; border-color: #818cf8; box-shadow: 0 0 0 .2rem rgba(129,140,248,.25); }
+        .form-control::placeholder { color: #64748b; }
+
+        .h-card { background: rgba(30,41,59,.7); border: 1px solid rgba(255,255,255,.08); border-radius: 18px; overflow: hidden;
+            transition: transform .25s ease, box-shadow .25s ease, opacity .35s ease; animation: cardIn .55s cubic-bezier(.2,.8,.2,1) both; }
+        .h-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px -12px rgba(99,102,241,.45); }
+        .h-card.removing { opacity: 0; transform: scale(.9); }
+        .h-card.hidden-by-filter { display: none; }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+        .thumb { position: relative; display: block; width: 100%; aspect-ratio: 4/3; background: #0b1220; overflow: hidden; border: 0; padding: 0; cursor: zoom-in; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+        .thumb:hover img { transform: scale(1.06); }
+        .thumb .zoom-hint { position: absolute; right: 10px; bottom: 10px; background: rgba(15,23,42,.8); border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; color: #fff; }
+        .thumb:hover .zoom-hint { opacity: 1; }
+        .mini { display: flex; gap: 8px; }
+        .mini button { flex: 1; border: 1px solid #334155; background: #0b1220; border-radius: 10px; padding: 0; overflow: hidden; cursor: zoom-in; position: relative; aspect-ratio: 16/10; }
+        .mini img { width: 100%; height: 100%; object-fit: cover; }
+        .mini span { position: absolute; left: 6px; top: 4px; font-size: .65rem; background: rgba(15,23,42,.8); padding: 1px 8px; border-radius: 12px; }
+        .missing { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; background: rgba(251,191,36,.08); padding: 14px; font-size: .9rem; }
+        .badge-soft { background: rgba(129,140,248,.18); color: #c7d2fe; font-weight: 500; }
+        .btn-grad { background: linear-gradient(135deg,#6366f1,#a855f7); border: none; color: #fff; }
+        .btn-grad:hover { color: #fff; filter: brightness(1.1); }
+        .empty { text-align: center; padding: 70px 10px; animation: cardIn .6s both; }
+        .empty i { font-size: 3rem; color: #818cf8; margin-bottom: 14px; }
+
+        /* Lightbox */
+        .lightbox { position: fixed; inset: 0; background: rgba(2,6,23,.94); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .lightbox.open { display: flex; animation: fade .25s; }
+        @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+        .lightbox img { max-width: 92vw; max-height: 78vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+        .lb-bar { margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .lb-bar .btn { border-color: rgba(255,255,255,.3); color: #fff; }
+        .lb-bar .btn.active { background: rgba(255,255,255,.22); }
+        .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font-size: 1.2rem; }
+        .lb-nav:hover { background: rgba(255,255,255,.28); }
+        .lb-prev { left: 16px; } .lb-next { right: 16px; }
+        .lb-close { position: absolute; top: 14px; right: 20px; font-size: 2rem; color: #fff; background: none; border: none; }
+        .lb-count { color: #94a3b8; font-size: .85rem; }
+
+        #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 11000; display: flex; flex-direction: column; gap: 10px; }
+        .toast-item { min-width: 240px; padding: 12px 16px; border-radius: 12px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.4); animation: tin .3s both; }
+        .toast-item.error { background: #b91c1c; } .toast-item.success { background: #047857; }
+        @keyframes tin { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+        .modal-content { background: #1e293b; color: #e2e8f0; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; }
+        @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    </style>
 </head>
+<body>
+<nav class="navbar navbar-dark sticky-top app-nav px-3">
+    <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fas fa-brain me-2"></i>AdaIN Style Transfer</a>
+    <div class="d-flex gap-3 align-items-center">
+        <a class="text-white text-decoration-none" href="{{ url_for('index') }}"><i class="fas fa-wand-magic-sparkles me-1"></i>Create</a>
+        <span class="text-white d-none d-sm-inline">{{ current_user.username }}</span>
+        <form method="POST" action="{{ url_for('logout') }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+        </form>
+    </div>
+</nav>
 
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                AdaIN Style Transfer
-            </a>
-            <div class="d-flex gap-3 align-items-center">
-                <a class="text-white" href="{{ url_for('index') }}">Home</a>
-                <span class="text-white">{{ current_user.username }}</span>
-
-                <form method="POST" action="{{ url_for('logout') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger btn-sm">
-                        Logout
-                    </button>
-                </form>
-
-            </div>
+<main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+        <div>
+            <h1 class="title mb-1">My History</h1>
+            <div class="text-secondary small"><span id="visibleCount">{{ transfers|length }}</span> shown on this page{% if pagination and pagination.total %} &middot; {{ pagination.total }} total{% endif %}</div>
         </div>
-    </nav>
+        <a href="{{ url_for('index') }}" class="btn btn-grad rounded-pill px-4"><i class="fas fa-plus me-1"></i>New transfer</a>
+    </div>
 
-    <div class="container py-4">
-        <h1 class="mb-4">My Style Transfer History</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}
+    {% endwith %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-        {% endwith %}
+    {% if transfers %}
+    <div class="toolbar row g-2 mb-4">
+        <div class="col-md-6"><div class="input-group"><span class="input-group-text bg-transparent border-secondary text-secondary"><i class="fas fa-magnifying-glass"></i></span>
+            <input id="search" type="search" class="form-control" placeholder="Search by #id, date (2026-10) or strength (0.5)…" autocomplete="off"></div></div>
+        <div class="col-6 col-md-3"><select id="sort" class="form-select" aria-label="Sort">
+            <option value="newest">Newest first</option><option value="oldest">Oldest first</option>
+            <option value="strong">Strongest style</option><option value="weak">Weakest style</option></select></div>
+        <div class="col-6 col-md-3"><select id="strength" class="form-select" aria-label="Filter strength">
+            <option value="all">Any strength</option><option value="low">Subtle (&le; 0.4)</option>
+            <option value="mid">Balanced (0.5 – 0.7)</option><option value="high">Strong (&ge; 0.8)</option></select></div>
+    </div>
 
-        {% if transfers %}
-        <div class="row g-4">
-            {% for item in transfers %}
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            Transfer #{{ item.id }}
-                        </h5>
-
-                        <p class="text-muted small">
-                            {{ item.created_at.strftime(
-                            '%Y-%m-%d %H:%M UTC'
-                            ) }}
-                        </p>
-
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <p class="small mb-1">Content</p>
-                                <img src="{{ url_for(
-                                            'send_image',
-                                            filename=item.content_filename
-                                        ) }}" class="img-fluid rounded" alt="Content image">
-                            </div>
-                            <div class="col-6">
-                                <p class="small mb-1">Style</p>
-                                <img src="{{ url_for(
-                                            'send_image',
-                                            filename=item.style_filename
-                                        ) }}" class="img-fluid rounded" alt="Style image">
-                            </div>
-                        </div>
-
-                        <hr>
-                        <p class="mb-2">
-                            Style strength: {{ item.alpha }}
-                        </p>
-
-                        <img src="{{ url_for(
-                                    'send_image',
-                                    filename=item.output_filename
-                                ) }}" class="img-fluid rounded mb-3" alt="Generated result">
-
-                        <a class="btn btn-primary w-100" href="{{ url_for(
-                                   'send_image',
-                                   filename=item.output_filename
-                               ) }}" download>
-                            Download Result
-                        </a>
+    <div class="row g-4" id="grid">
+        {% for item in transfers %}
+        <div class="col-12 col-md-6 col-lg-4 h-col" data-id="{{ item.id }}" data-alpha="{{ item.alpha }}"
+             data-ts="{{ item.created_at.timestamp()|int }}" data-date="{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}"
+             data-ok="{{ 1 if item.files_ok else 0 }}"
+             {% if item.files_ok %}data-result="{{ url_for('send_image', filename=item.output_filename) }}"
+             data-content="{{ url_for('send_image', filename=item.content_filename) }}"
+             data-style="{{ url_for('send_image', filename=item.style_filename) }}"{% endif %}>
+            <div class="h-card h-100" style="animation-delay: {{ (loop.index0 % 9) * 60 }}ms">
+                {% if item.files_ok %}
+                <button type="button" class="thumb" data-open aria-label="Enlarge transfer {{ item.id }}">
+                    <img loading="lazy" src="{{ url_for('send_image', filename=item.output_filename) }}" alt="Generated result">
+                    <span class="zoom-hint"><i class="fas fa-expand"></i></span>
+                </button>
+                {% else %}
+                <div class="missing"><div><i class="fas fa-triangle-exclamation mb-2 d-block fs-3"></i>Some image files for this transfer are no longer available.</div></div>
+                {% endif %}
+                <div class="p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Transfer #{{ item.id }}</strong>
+                        <span class="badge badge-soft rounded-pill">strength {{ item.alpha }}</span>
+                    </div>
+                    <div class="text-secondary small mb-3"><i class="far fa-calendar me-1"></i>{{ item.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</div>
+                    {% if item.files_ok %}
+                    <div class="mini mb-3">
+                        <button type="button" data-open="content"><img loading="lazy" src="{{ url_for('send_image', filename=item.content_filename) }}" alt="Content"><span>Content</span></button>
+                        <button type="button" data-open="style"><img loading="lazy" src="{{ url_for('send_image', filename=item.style_filename) }}" alt="Style"><span>Style</span></button>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        {% if item.files_ok %}<a class="btn btn-grad btn-sm flex-fill" href="{{ url_for('send_image', filename=item.output_filename) }}" download><i class="fas fa-download me-1"></i>Download</a>{% endif %}
+                        <button type="button" class="btn btn-outline-danger btn-sm flex-fill" data-delete><i class="fas fa-trash me-1"></i>Delete</button>
                     </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
-        {% else %}
-        <div class="alert alert-info">
-            You have no saved results yet. Generate your first
-            stylized image from the home page.
-        </div>
-        <a href="{{ url_for('index') }}" class="btn btn-primary">
-            Start Style Transfer
-        </a>
-        {% endif %}
+        {% endfor %}
     </div>
-</body>
+    <div id="noMatch" class="empty" style="display:none"><i class="fas fa-filter-circle-xmark d-block"></i><h5>No transfers match your filters</h5>
+        <button class="btn btn-outline-light btn-sm mt-2" id="resetFilters">Reset filters</button></div>
 
+    {% if pagination and pagination.pages > 1 %}
+    <nav class="mt-4 d-flex justify-content-center gap-2 align-items-center">
+        {% if pagination.has_prev %}<a class="btn btn-outline-light btn-sm" href="{{ url_for('history', page=pagination.prev_num) }}">&laquo; Newer</a>{% endif %}
+        <span class="small text-secondary">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}<a class="btn btn-outline-light btn-sm" href="{{ url_for('history', page=pagination.next_num) }}">Older &raquo;</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% endif %}
+
+    <div id="emptyState" class="empty" style="{{ '' if not transfers else 'display:none' }}">
+        <i class="fas fa-images d-block"></i><h4>No saved results yet</h4>
+        <p class="text-secondary">Generate your first stylized image and it will show up here.</p>
+        <a href="{{ url_for('index') }}" class="btn btn-grad rounded-pill px-4">Start Style Transfer</a>
+    </div>
+</main>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button class="lb-close" id="lbClose" aria-label="Close">&times;</button>
+    <button class="lb-nav lb-prev" id="lbPrev" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
+    <button class="lb-nav lb-next" id="lbNext" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+    <img id="lbImg" alt="">
+    <div class="lb-bar">
+        <div class="btn-group" role="group">
+            <button class="btn btn-sm" data-view="content">Content</button>
+            <button class="btn btn-sm" data-view="style">Style</button>
+            <button class="btn btn-sm active" data-view="result">Result</button>
+        </div>
+        <span class="lb-count" id="lbCount"></span>
+    </div>
+</div>
+
+<!-- Delete confirmation -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-body p-4 text-center">
+            <i class="fas fa-trash fs-2 text-danger mb-3"></i>
+            <h5>Delete transfer <span id="delId"></span>?</h5>
+            <p class="text-secondary mb-4">This permanently removes the record and its images.</p>
+            <button class="btn btn-outline-light me-2" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-danger" id="confirmDelete"><span class="spinner-border spinner-border-sm d-none me-1" id="delSpin"></span>Delete</button>
+        </div>
+    </div></div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const CSRF = {{ csrf_token()|tojson }};
+    const DELETE_URL = id => {{ url_for('delete_transfer', transfer_id=0)|tojson }}.replace(/0\/delete$/, id + '/delete');
+
+    function toast(msg, type) {
+        const el = document.createElement('div'); el.className = 'toast-item ' + (type || 'success'); el.textContent = msg;
+        $('#toasts').appendChild(el); setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 3500);
+    }
+
+    /* page transition */
+    requestAnimationFrame(() => document.body.classList.add('page-ready'));
+    window.addEventListener('pageshow', e => { if (e.persisted) { document.body.classList.add('page-ready'); document.body.classList.remove('page-leaving'); } });
+    document.addEventListener('click', e => {
+        const a = e.target.closest('a[href]');
+        if (!a || a.target || a.hasAttribute('download') || e.metaKey || e.ctrlKey || e.shiftKey) return;
+        const u = new URL(a.href, location.href);
+        if (u.origin !== location.origin || (u.hash && u.pathname === location.pathname)) return;
+        e.preventDefault(); document.body.classList.add('page-leaving'); setTimeout(() => location.href = a.href, 250);
+    });
+
+    const grid = $('#grid');
+    if (!grid) return;
+    const cols = () => $$('.h-col', grid);
+
+    /* ---------- search / filter / sort (applies to the cards on this page) ---------- */
+    const search = $('#search'), sortSel = $('#sort'), strSel = $('#strength');
+    function apply() {
+        const q = search.value.trim().toLowerCase().replace(/^#/, '');
+        let shown = 0;
+        cols().forEach(c => {
+            const a = parseFloat(c.dataset.alpha);
+            const text = [c.dataset.id, c.dataset.date, a.toFixed(1), String(a)].join(' ').toLowerCase();
+            const okQ = !q || text.includes(q);
+            const f = strSel.value;
+            const okS = f === 'all' || (f === 'low' && a <= 0.4) || (f === 'mid' && a > 0.4 && a < 0.8) || (f === 'high' && a >= 0.8);
+            const vis = okQ && okS;
+            c.style.display = vis ? '' : 'none'; if (vis) shown++;
+        });
+        const order = { newest: (a, b) => b.dataset.ts - a.dataset.ts, oldest: (a, b) => a.dataset.ts - b.dataset.ts,
+            strong: (a, b) => b.dataset.alpha - a.dataset.alpha, weak: (a, b) => a.dataset.alpha - b.dataset.alpha }[sortSel.value];
+        cols().sort(order).forEach(c => grid.appendChild(c));
+        $('#visibleCount').textContent = shown;
+        $('#noMatch').style.display = shown || !cols().length ? 'none' : '';
+    }
+    [search, sortSel, strSel].forEach(el => el.addEventListener('input', apply));
+    $('#resetFilters').addEventListener('click', () => { search.value = ''; strSel.value = 'all'; sortSel.value = 'newest'; apply(); });
+
+    /* ---------- lightbox with prev/next + content/style/result tabs ---------- */
+    const lb = $('#lightbox'), img = $('#lbImg'); let list = [], idx = 0, view = 'result';
+    function visibleOk() { return cols().filter(c => c.style.display !== 'none' && c.dataset.ok === '1'); }
+    function show() {
+        const c = list[idx]; if (!c) return;
+        img.src = c.dataset[view]; img.alt = 'Transfer #' + c.dataset.id + ' ' + view;
+        $('#lbCount').textContent = '#' + c.dataset.id + '  ·  ' + (idx + 1) + ' / ' + list.length;
+        $$('.lb-bar [data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+        $('#lbPrev').style.display = $('#lbNext').style.display = list.length > 1 ? '' : 'none';
+    }
+    function openLb(col, v) { list = visibleOk(); idx = Math.max(0, list.indexOf(col)); view = v || 'result'; lb.classList.add('open'); document.body.style.overflow = 'hidden'; show(); }
+    function closeLb() { lb.classList.remove('open'); document.body.style.overflow = ''; }
+    const step = d => { if (list.length) { idx = (idx + d + list.length) % list.length; show(); } };
+    grid.addEventListener('click', e => {
+        const o = e.target.closest('[data-open]'); if (!o) return;
+        openLb(o.closest('.h-col'), o.dataset.open === 'content' || o.dataset.open === 'style' ? o.dataset.open : 'result');
+    });
+    $('#lbClose').addEventListener('click', closeLb); $('#lbPrev').addEventListener('click', () => step(-1)); $('#lbNext').addEventListener('click', () => step(1));
+    lb.addEventListener('click', e => { if (e.target === lb) closeLb(); });
+    $$('.lb-bar [data-view]').forEach(b => b.addEventListener('click', () => { view = b.dataset.view; show(); }));
+    document.addEventListener('keydown', e => {
+        if (!lb.classList.contains('open')) return;
+        if (e.key === 'Escape') closeLb(); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1);
+    });
+    let tx = null; lb.addEventListener('touchstart', e => tx = e.touches[0].clientX, { passive: true });
+    lb.addEventListener('touchend', e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) step(dx > 0 ? -1 : 1); tx = null; });
+
+    /* ---------- delete (AJAX, with confirmation) ---------- */
+    const modalEl = $('#confirmModal'), modal = new bootstrap.Modal(modalEl); let target = null;
+    grid.addEventListener('click', e => { const b = e.target.closest('[data-delete]'); if (!b) return;
+        target = b.closest('.h-col'); $('#delId').textContent = '#' + target.dataset.id; modal.show(); });
+    $('#confirmDelete').addEventListener('click', async () => {
+        if (!target) return; const btn = $('#confirmDelete'), spin = $('#delSpin'); btn.disabled = true; spin.classList.remove('d-none');
+        try {
+            const res = await fetch(DELETE_URL(target.dataset.id), { method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok || !d.ok) throw new Error(d.error || 'Delete failed (HTTP ' + res.status + ')');
+            const col = target; modal.hide(); col.querySelector('.h-card').classList.add('removing');
+            setTimeout(() => { col.remove(); apply();
+                if (!cols().length) { if (d.remaining > 0) location.reload(); else { $('#emptyState').style.display = ''; $('.toolbar').style.display = 'none'; } } }, 350);
+            toast('Transfer deleted.');
+        } catch (err) { toast(err.message, 'error'); }
+        finally { btn.disabled = false; spin.classList.add('d-none'); target = null; }
+    });
+    apply();
+})();
+</script>
+</body>
 </html>

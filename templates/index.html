@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AdaIN Style Transfer</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -573,32 +577,106 @@
         color: #94a3b8;
     }
 </style>
+<style>
+    /* ===== Interactive layer ===== */
+    html { scroll-behavior: smooth; }
+    body { opacity: 0; transition: opacity .35s ease; }
+    body.page-ready { opacity: 1; }
+    body.page-leaving { opacity: 0; }
+    section[id], .header-section { scroll-margin-top: 70px; }
+
+    .app-nav { background: rgba(15, 23, 42, .85); backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, .08); z-index: 1030; }
+    .app-nav .nav-link { color: #cbd5e1; transition: color .2s; }
+    .app-nav .nav-link:hover { color: #fff; }
+
+    .reveal { opacity: 0; transform: translateY(28px); animation: none !important;
+        transition: opacity .7s ease, transform .7s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+
+    /* Drag & drop zones */
+    .preview-image { cursor: pointer; position: relative; transition: border-color .2s, background .2s, transform .2s; }
+    .preview-image:hover { border-color: #818cf8; }
+    .preview-image.drag-over { border-color: #c084fc; background: rgba(168, 85, 247, .12); transform: scale(1.015); }
+    .dz-hint { display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; text-align: center; padding: 0 10px; }
+    .dz-hint i { font-size: 2rem; color: #818cf8; }
+    .dz-hint small { color: #64748b; font-size: .8rem; }
+    .dz-clear { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: none;
+        background: rgba(15, 23, 42, .85); color: #fff; display: none; align-items: center; justify-content: center; z-index: 2; }
+    .dz-clear:hover { background: #dc2626; }
+    .preview-image.has-image .dz-clear { display: flex; }
+    .dz-badge { position: absolute; left: 8px; bottom: 8px; font-size: .75rem; padding: 3px 10px; border-radius: 20px;
+        background: rgba(15, 23, 42, .85); color: #cbd5e1; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; z-index: 2; }
+
+    /* Loader progress */
+    .progress-box { width: min(380px, 80vw); text-align: center; margin-top: 8px; }
+    .progress-box .progress { height: 10px; background: rgba(255, 255, 255, .1); border-radius: 10px; }
+    .progress-box .progress-bar { background: linear-gradient(90deg, #6366f1, #c084fc); transition: width .2s ease; }
+    #loaderStatus { margin: 12px 0 0; color: #cbd5e1; font-size: .95rem; min-height: 1.4em; }
+
+    /* Result card + before/after slider */
+    .result-card { overflow: hidden; }
+    .result-reveal { animation: resultIn .6s cubic-bezier(.2, .8, .2, 1) both; }
+    @keyframes resultIn { from { opacity: 0; transform: translateY(30px) scale(.97); } to { opacity: 1; transform: none; } }
+    .view-tabs .btn { border-color: rgba(255, 255, 255, .35); color: #fff; font-size: .8rem; padding: 4px 14px; }
+    .view-tabs .btn.active { background: rgba(255, 255, 255, .25); }
+    .compare { --pos: 50%; position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; background: #0b1220; user-select: none; }
+    .compare.animating .cmp-after { transition: clip-path .5s ease; }
+    .compare.animating .cmp-handle { transition: left .5s ease; }
+    .compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+    .cmp-after { clip-path: inset(0 0 0 var(--pos)); }
+    .cmp-handle { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 3px; margin-left: -1.5px; background: #fff;
+        box-shadow: 0 0 12px rgba(0, 0, 0, .6); pointer-events: none; }
+    .cmp-handle span { position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, .5); }
+    .cmp-range { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; touch-action: pan-y; }
+    .cmp-tag { position: absolute; top: 12px; font-size: .75rem; padding: 3px 12px; border-radius: 20px; background: rgba(15, 23, 42, .75); color: #fff; pointer-events: none; }
+    .cmp-tag.left { left: 12px; } .cmp-tag.right { right: 12px; }
+    .result-actions .btn { margin: 4px; }
+
+    /* Toasts */
+    #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 11000; display: flex; flex-direction: column; gap: 10px; }
+    .toast-item { min-width: 260px; max-width: 360px; padding: 12px 16px; border-radius: 12px; color: #fff; font-size: .92rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .4); animation: toastIn .35s ease both; display: flex; gap: 10px; align-items: start; }
+    .toast-item.error { background: #b91c1c; } .toast-item.success { background: #047857; } .toast-item.info { background: #4338ca; }
+    .toast-item.out { animation: toastOut .3s ease both; }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+    @keyframes toastOut { to { opacity: 0; transform: translateX(40px); } }
+
+    /* Lightbox */
+    .lightbox { position: fixed; inset: 0; background: rgba(2, 6, 23, .92); z-index: 12000; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+    .lightbox.open { display: flex; animation: fadeIn .25s ease; }
+    .lightbox img { max-width: 94vw; max-height: 92vh; border-radius: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+    .lightbox .lb-close { position: absolute; top: 16px; right: 20px; font-size: 2rem; color: #fff; background: none; border: none; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    img[data-zoom], .example-image { cursor: zoom-in; }
+    @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } html { scroll-behavior: auto; } }
+</style>
+
 </head>
 
 <body>
 
-    <nav class="navbar navbar-dark bg-dark px-3 mb-4">
-        <a class="navbar-brand" href="{{ url_for('index') }}">
-            AdaIN Style Transfer
-        </a>
-
-        <div class="d-flex align-items-center gap-3">
-            <span class="text-white">
-                Hello, {{ current_user.username }}
-            </span>
-
-            <a class="btn btn-outline-light btn-sm" href="{{ url_for('history') }}">
-                My History
-            </a>
-
-
-            <form method="POST" action="{{ url_for('logout') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-danger btn-sm">
-                    Logout
-                </button>
-            </form>
-
+    <nav class="navbar navbar-expand-md navbar-dark sticky-top app-nav px-3">
+        <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fas fa-brain me-2"></i>AdaIN Style Transfer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="#top">Create</a></li>
+                <li class="nav-item"><a class="nav-link" href="#examples">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="#faq">FAQ</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="text-white">Hello, {{ current_user.username }}</span>
+                <a class="btn btn-outline-light btn-sm" href="{{ url_for('history') }}"><i class="fas fa-clock-rotate-left me-1"></i>My History</a>
+                <form method="POST" action="{{ url_for('logout') }}" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
         </div>
     </nav>
 
@@ -608,27 +686,9 @@
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
 
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="#"><i class="fas fa-brain me-2"></i>NeuralArt</a>
-            <button class="navbar-toggler navbar-dark" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Gallery</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Features</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Pricing</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Contact</a></li>
-                </ul>
-                <a href="#" class="btn btn-sm btn-outline-light ms-3 rounded-pill px-4">Sign In</a>
-            </div>
-        </div>
-    </nav>
+    
 
-    <div class="header-section">
+    <div class="header-section" id="top">
         <div class="container">
             <h1 class="display-4 fw-bold">STYLEFORGE AI</h1>
             <p class="lead"
@@ -697,35 +757,12 @@
             </div>
         </form>
 
-        {% if result_image %}
-        <div class="row justify-content-center mt-5" id="resultSection">
-            <div class="col-md-8">
-                <div class="card border-success">
-                    <div class="card-header bg-success text-white fw-bold text-center py-3"
-                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Stylized Result</div>
-                    <div class="card-body p-0">
-                        <img src="{{ url_for('send_image', filename=result_image) }}" class="img-fluid w-100"
-                            alt="Stylized Image" style="border-radius: 0 0 20px 20px;">
-                    </div>
-                    <div class="card-footer text-center"
-                        style="background: transparent; border-top: none; padding-bottom: 20px;">
-                        <a href="{{ url_for('send_image', filename=result_image) }}" download
-                            class="btn btn-outline-light mt-2">Download Result</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if error %}
-        <div class="alert alert-danger mt-4 text-center" role="alert"
-            style="background: rgba(220, 38, 38, 0.2); border-color: #dc2626; color: #fecaca;">
-            <strong>Error:</strong> {{ error }}
-        </div>
-        {% endif %}
+        <div id="resultMount"></div>
+        <div id="errorMount"></div>
+        <noscript>{% if result_image %}<img src="{{ url_for('send_image', filename=result_image) }}" class="img-fluid" alt="Stylized">{% endif %}{% if error %}<p class="text-danger">{{ error }}</p>{% endif %}</noscript>
     </div>
 
-    <section class="container examples-section fade-in-up">
+    <section class="container examples-section fade-in-up" id="examples">
         <div class="card">
             <div class="card-header text-center py-3">Examples</div>
             <div class="card-body">
@@ -781,7 +818,7 @@
         </div>
     </section>
 
-    <section class="container faq-section fade-in-up">
+    <section class="container faq-section fade-in-up" id="faq">
         <div class="card">
             <div class="card-header text-center py-3">FAQs</div>
             <div class="card-body">
@@ -908,6 +945,11 @@
         <div class="cyber-spinner mb-4"></div>
         <h3 class="text-white" style="font-family: 'Orbitron', sans-serif; letter-spacing: 2px;">PROCESSING</h3>
         <p class="text-muted">Neural Network is dreaming...</p>
+        <div class="progress-box">
+            <div class="progress"><div id="loaderBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>
+            <p id="loaderStatus">Uploading…</p>
+            <button type="button" id="cancelBtn" class="btn btn-sm btn-outline-light">Cancel</button>
+        </div>
     </div>
 
     <style>
@@ -1076,6 +1118,245 @@
 
         }
     </script>
+<div id="toasts" aria-live="polite"></div>
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Image preview">
+    <button class="lb-close" type="button" aria-label="Close">&times;</button>
+    <img id="lbImg" alt="Enlarged image">
+</div>
+
+<script>
+(function () {
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const ALLOWED = ['image/png', 'image/jpeg'];
+    const MAX_TOTAL = 10 * 1024 * 1024;
+
+    /* ---------- toasts ---------- */
+    function toast(msg, type = 'info', ms = 5000) {
+        const el = document.createElement('div');
+        el.className = 'toast-item ' + type;
+        const icon = type === 'error' ? 'fa-circle-exclamation' : type === 'success' ? 'fa-circle-check' : 'fa-circle-info';
+        el.innerHTML = '<i class="fas ' + icon + ' mt-1"></i><span></span>';
+        el.lastChild.textContent = msg;
+        $('#toasts').appendChild(el);
+        const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
+        el.addEventListener('click', close);
+        setTimeout(close, ms);
+    }
+    window.appToast = toast;
+
+    /* ---------- lightbox ---------- */
+    const lb = $('#lightbox'), lbImg = $('#lbImg');
+    function openLightbox(src) { lbImg.src = src; lb.classList.add('open'); }
+    function closeLightbox() { lb.classList.remove('open'); }
+    lb.addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+    document.addEventListener('click', e => {
+        const img = e.target.closest('img[data-zoom], img.example-image, .example-image img');
+        if (img && !img.closest('.preview-image')) openLightbox(img.currentSrc || img.src);
+    });
+
+    /* ---------- page transitions + reveal on scroll ---------- */
+    requestAnimationFrame(() => document.body.classList.add('page-ready'));
+    window.addEventListener('pageshow', e => { if (e.persisted) document.body.classList.add('page-ready'); document.body.classList.remove('page-leaving'); });
+    document.addEventListener('click', e => {
+        const a = e.target.closest('a[href]');
+        if (!a || a.target || a.hasAttribute('download') || e.metaKey || e.ctrlKey || e.shiftKey) return;
+        const url = new URL(a.href, location.href);
+        if (url.origin !== location.origin || url.hash && url.pathname === location.pathname) return;
+        e.preventDefault();
+        document.body.classList.add('page-leaving');
+        setTimeout(() => { location.href = a.href; }, 250);
+    });
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+        entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { threshold: 0.12 }) : null;
+    $$('.examples-section, .faq-section, .footer-section').forEach(el => {
+        if (io) { el.classList.add('reveal'); io.observe(el); }
+    });
+
+    /* ---------- drag & drop upload zones ---------- */
+    const form = $('#uploadForm');
+    const zones = [
+        { box: $('#contentPreview'), input: $('#content'), hidden: $('#content_path'), label: 'content', placeholder: 'Select Content Image' },
+        { box: $('#stylePreview'), input: $('#style'), hidden: $('#style_path'), label: 'style', placeholder: 'Select Style Image' },
+    ];
+    const hintHTML = (txt) => '<div class="dz-hint"><i class="fas fa-cloud-arrow-up"></i><span>' + txt +
+        '</span><small>Drag &amp; drop, or click &middot; PNG / JPG &middot; 10&nbsp;MB total</small></div>';
+
+    function totalSize(except) {
+        return zones.reduce((n, z) => n + (z !== except && z.input.files[0] ? z.input.files[0].size : 0), 0);
+    }
+    function validate(file, zone) {
+        if (!ALLOWED.includes(file.type)) { toast('Only PNG or JPG images are supported.', 'error'); return false; }
+        if (file.size + totalSize(zone) > MAX_TOTAL) { toast('Both images together must be under 10 MB.', 'error'); return false; }
+        return true;
+    }
+    function setBadge(zone, text) {
+        let b = $('.dz-badge', zone.box);
+        if (!text) { if (b) b.remove(); return; }
+        if (!b) { b = document.createElement('span'); b.className = 'dz-badge'; zone.box.appendChild(b); }
+        b.textContent = text;
+    }
+    function showFile(zone, file) {
+        const r = new FileReader();
+        r.onload = () => {
+            zone.box.innerHTML = '<img src="' + r.result + '" alt="' + zone.label + ' preview">';
+            decorate(zone);
+            zone.box.classList.add('has-image');
+            setBadge(zone, file.name + ' (' + Math.round(file.size / 1024) + ' KB)');
+        };
+        r.readAsDataURL(file);
+    }
+    function decorate(zone) {
+        const x = document.createElement('button');
+        x.type = 'button'; x.className = 'dz-clear'; x.title = 'Remove image'; x.innerHTML = '<i class="fas fa-xmark"></i>';
+        x.addEventListener('click', ev => { ev.stopPropagation(); clearZone(zone); });
+        zone.box.appendChild(x);
+    }
+    function clearZone(zone) {
+        zone.input.value = ''; zone.hidden.value = '';
+        zone.box.classList.remove('has-image');
+        zone.box.innerHTML = hintHTML(zone.placeholder);
+        decorate(zone);
+    }
+    function handleFiles(zone, files) {
+        const file = files && files[0];
+        if (!file || !validate(file, zone)) { if (file) zone.input.value = ''; return; }
+        const dt = new DataTransfer(); dt.items.add(file);
+        zone.input.files = dt.files;
+        zone.hidden.value = '';           // a fresh upload replaces any reused image
+        showFile(zone, file);
+    }
+    zones.forEach(zone => {
+        if (!zone.box || !zone.input) return;
+        const hadServerImage = !!$('img', zone.box);
+        if (!hadServerImage) zone.box.innerHTML = hintHTML(zone.placeholder);
+        else zone.box.classList.add('has-image');
+        decorate(zone);
+        zone.box.setAttribute('tabindex', '0');
+        zone.box.addEventListener('click', () => zone.input.click());
+        zone.box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); zone.input.click(); } });
+        ['dragenter', 'dragover'].forEach(ev => zone.box.addEventListener(ev, e => { e.preventDefault(); zone.box.classList.add('drag-over'); }));
+        ['dragleave', 'drop'].forEach(ev => zone.box.addEventListener(ev, e => { e.preventDefault(); zone.box.classList.remove('drag-over'); }));
+        zone.box.addEventListener('drop', e => handleFiles(zone, e.dataTransfer.files));
+        zone.input.addEventListener('change', () => handleFiles(zone, zone.input.files));
+        zone.input.style.display = 'none';      // the whole preview box is the picker now
+    });
+    // Stop the browser from navigating away if a file is dropped outside a zone.
+    ['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => { if (!e.target.closest('.preview-image')) e.preventDefault(); }));
+
+    /* ---------- result card with before/after slider ---------- */
+    const mount = $('#resultMount');
+    function renderResult(d) {
+        mount.innerHTML =
+            '<div class="row justify-content-center mt-5 result-reveal" id="resultSection"><div class="col-lg-9"><div class="card border-success result-card">' +
+            '<div class="card-header text-white fw-bold py-3 d-flex flex-wrap justify-content-between align-items-center gap-2" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%)">' +
+            '<span>Stylized Result</span><div class="btn-group view-tabs" role="group" aria-label="View">' +
+            '<button type="button" class="btn active" data-view="compare">Compare</button>' +
+            '<button type="button" class="btn" data-view="result">Stylized</button>' +
+            '<button type="button" class="btn" data-view="original">Original</button></div></div>' +
+            '<div class="card-body p-0"><div class="compare" id="compare">' +
+            '<img class="cmp-before" alt="Original" src="' + d.content_url + '">' +
+            '<img class="cmp-after" alt="Stylized" src="' + d.result_url + '">' +
+            '<span class="cmp-tag left">Original</span><span class="cmp-tag right">Stylized</span>' +
+            '<div class="cmp-handle"><span><i class="fas fa-left-right"></i></span></div>' +
+            '<input class="cmp-range" type="range" min="0" max="100" value="50" aria-label="Before and after position"></div></div>' +
+            '<div class="card-footer text-center result-actions" style="background:transparent;border-top:none;padding-bottom:20px">' +
+            '<a class="btn btn-outline-light" download href="' + d.result_url + '"><i class="fas fa-download me-1"></i>Download</a>' +
+            '<button type="button" class="btn btn-outline-light" id="zoomBtn"><i class="fas fa-expand me-1"></i>Enlarge</button>' +
+            '<a class="btn btn-outline-light" href="' + HISTORY_URL + '"><i class="fas fa-clock-rotate-left me-1"></i>History</a>' +
+            (d.alpha != null ? '<div class="small text-muted mt-2">Style strength: ' + d.alpha + '</div>' : '') +
+            '</div></div></div></div>';
+
+        const cmp = $('#compare'), range = $('.cmp-range', cmp), after = $('.cmp-after', cmp);
+        const setPos = v => cmp.style.setProperty('--pos', v + '%');
+        after.addEventListener('load', () => { if (after.naturalWidth) cmp.style.aspectRatio = after.naturalWidth + ' / ' + after.naturalHeight; });
+        range.addEventListener('input', () => { cmp.classList.remove('animating'); setPos(range.value); $$('.view-tabs .btn', mount).forEach(b => b.classList.toggle('active', b.dataset.view === 'compare')); });
+        $$('.view-tabs .btn', mount).forEach(btn => btn.addEventListener('click', () => {
+            const v = { compare: 50, result: 0, original: 100 }[btn.dataset.view];
+            cmp.classList.add('animating'); range.value = v; setPos(v);
+            $$('.view-tabs .btn', mount).forEach(b => b.classList.toggle('active', b === btn));
+        }));
+        // little intro sweep so people notice it is draggable
+        cmp.classList.add('animating'); setPos(100);
+        setTimeout(() => setPos(50), 350);
+        setTimeout(() => cmp.classList.remove('animating'), 1000);
+        $('#zoomBtn').addEventListener('click', () => openLightbox(d.result_url));
+        mount.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function showError(msg) {
+        const box = $('#errorMount');
+        box.innerHTML = '<div class="alert alert-danger mt-4 text-center" role="alert" style="background:rgba(220,38,38,.2);border-color:#dc2626;color:#fecaca"><strong>Error:</strong> <span></span></div>';
+        $('span', box).textContent = msg;
+        toast(msg, 'error');
+    }
+    const HISTORY_URL = {{ url_for('history')|tojson }};
+    const INITIAL = {{ initial|tojson }};
+    if (INITIAL && INITIAL.result_url) renderResult(INITIAL);
+    if (INITIAL && INITIAL.error) showError(INITIAL.error);
+
+    /* ---------- AJAX submit with upload progress ---------- */
+    const loader = $('#loader'), bar = $('#loaderBar'), status = $('#loaderStatus');
+    const submitBtn = form.querySelector('[type=submit]');
+    const phases = ['Encoding content features…', 'Matching style statistics (AdaIN)…', 'Decoding the stylized image…', 'Almost there…'];
+    let xhr = null, phaseTimer = null;
+
+    function setLoading(on) {
+        loader.classList.toggle('active', on);
+        submitBtn.disabled = on;
+        if (!on) { clearInterval(phaseTimer); bar.style.width = '0%'; }
+    }
+    form.addEventListener('submit', e => {
+        if (!window.XMLHttpRequest || !window.FormData) return;     // graceful fallback: normal post
+        const hasC = zones[0].input.files.length || zones[0].hidden.value;
+        const hasS = zones[1].input.files.length || zones[1].hidden.value;
+        if (!hasC || !hasS) {
+            e.preventDefault();
+            toast('Please choose both a content image and a style image.', 'error');
+            (hasC ? zones[1] : zones[0]).box.focus();
+            return;
+        }
+        e.preventDefault();
+        $('#errorMount').innerHTML = '';
+        const fd = new FormData(form);
+        xhr = new XMLHttpRequest();
+        xhr.open('POST', form.getAttribute('action') || location.href);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.upload.onprogress = ev => {
+            if (!ev.lengthComputable) return;
+            const pct = Math.round(ev.loaded / ev.total * 100);
+            bar.style.width = pct + '%';
+            status.textContent = pct < 100 ? 'Uploading… ' + pct + '%' : phases[0];
+        };
+        xhr.upload.onload = () => {
+            let i = 0; bar.style.width = '100%'; status.textContent = phases[0];
+            phaseTimer = setInterval(() => { i = Math.min(i + 1, phases.length - 1); status.textContent = phases[i]; }, 3000);
+        };
+        xhr.onload = () => {
+            setLoading(false);
+            let d = null;
+            try { d = JSON.parse(xhr.responseText); } catch (_) { }
+            if (xhr.status === 200 && d && d.ok) {
+                zones[0].hidden.value = d.content_filename; zones[1].hidden.value = d.style_filename;
+                zones.forEach(z => { z.input.value = ''; setBadge(z, 'Saved — reused for the next run'); });
+                renderResult(d);
+                toast('Style transfer complete!', 'success', 3000);
+            } else {
+                showError((d && d.error) || 'Something went wrong (HTTP ' + xhr.status + '). Please try again.');
+            }
+        };
+        xhr.onerror = () => { setLoading(false); showError('Network error. Check your connection and try again.'); };
+        xhr.onabort = () => { setLoading(false); toast('Cancelled.', 'info', 2000); };
+        status.textContent = 'Uploading… 0%'; bar.style.width = '0%';
+        setLoading(true);
+        xhr.send(fd);
+    });
+    $('#cancelBtn').addEventListener('click', () => { if (xhr) xhr.abort(); });
+})();
+</script>
+
 </body>
 
 </html>

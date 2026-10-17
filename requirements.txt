@@ -10,7 +10,9 @@ torchaudio==2.2.2
 Werkzeug==3.1.4
 WTForms==3.2.1
 gunicorn
-Flask-SQLAlchemy
-Flask-Login
-psycopg[binary]
+Flask-SQLAlchemy>=3.1,<4.0
+SQLAlchemy>=2.0,<2.1
+Flask-Migrate>=4.0
+Flask-Login>=0.6.3
+psycopg[binary]>=3.1
 python-dotenv

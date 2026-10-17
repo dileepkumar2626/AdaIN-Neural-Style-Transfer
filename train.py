@@ -18,7 +18,7 @@ def parse_arguments():
     parser.add_argument("--final_size",type=int,default=256,help="Size of final image")
     parser.add_argument("--content_size",type=int,default=512,help="Size of content image")
     parser.add_argument("--style_size",type=int,default=512,help="Size of style image ")
-    parser.add_argument("crop",action="store_true",default=True,help="Crop image ")
+    parser.add_argument("--crop",action=argparse.BooleanOptionalAction,default=True,help="Random-crop images (use --no-crop to disable)")
     parser.add_argument("--batch_size",type=int ,default=4,help="Batch size")
     parser.add_argument('--lr', type=float, default=1e-4,help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=5e-5,help='Learning rate decay')

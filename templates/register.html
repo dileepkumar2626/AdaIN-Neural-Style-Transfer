@@ -1,67 +1,136 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Create Account | AdaIN Style Transfer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; min-height: 100vh; color: #e2e8f0; background: #0f172a; overflow-x: hidden;
+            opacity: 0; transition: opacity .35s ease; }
+        body.page-ready { opacity: 1; } body.page-leaving { opacity: 0; }
+        canvas#bg { position: fixed; inset: 0; z-index: 0; }
+        .wrap { position: relative; z-index: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 12px; }
+        .auth-card { width: 100%; max-width: 440px; background: rgba(30,41,59,.72); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 22px; padding: 34px 30px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.6); animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes rise { from { opacity: 0; transform: translateY(40px) scale(.96); } to { opacity: 1; transform: none; } }
+        .brand { font-family: 'Orbitron', sans-serif; text-align: center; font-size: 1.5rem; margin-bottom: 4px;
+            background: linear-gradient(90deg,#818cf8,#c084fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .sub { text-align: center; color: #94a3b8; margin-bottom: 22px; }
+        .form-label { font-size: .85rem; color: #cbd5e1; }
+        .form-control { background: rgba(15,23,42,.8); border: 1px solid #334155; color: #e2e8f0; padding: 11px 14px; border-radius: 12px; transition: border-color .2s, box-shadow .2s; }
+        .form-control:focus { background: rgba(15,23,42,.95); color: #fff; border-color: #818cf8; box-shadow: 0 0 0 .2rem rgba(129,140,248,.25); }
+        .form-control.is-valid { border-color: #10b981; background-image: none; } .form-control.is-invalid { border-color: #ef4444; background-image: none; }
+        .pw { position: relative; } .pw .form-control { padding-right: 46px; }
+        .pw button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; width: 38px; height: 38px; border-radius: 10px; }
+        .pw button:hover { color: #fff; background: rgba(255,255,255,.08); }
+        .hint { font-size: .78rem; color: #94a3b8; min-height: 1.1em; margin-top: 4px; } .hint.bad { color: #fca5a5; } .hint.good { color: #6ee7b7; }
+        .btn-go { background: linear-gradient(135deg,#6366f1,#a855f7); border: none; color: #fff; padding: 12px; border-radius: 14px; font-weight: 600;
+            transition: transform .2s, box-shadow .2s, filter .2s; box-shadow: 0 10px 22px -10px rgba(168,85,247,.7); }
+        .btn-go:hover:not(:disabled) { color: #fff; transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-go:disabled { opacity: .75; }
+        .alert { border-radius: 12px; border: none; animation: shake .4s; }
+        .alert-danger { background: rgba(220,38,38,.2); color: #fecaca; } .alert-success { background: rgba(16,185,129,.2); color: #a7f3d0; }
+        @keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+        .meter { height: 6px; background: rgba(255,255,255,.1); border-radius: 6px; overflow: hidden; margin-top: 8px; }
+        .meter > div { height: 100%; width: 0; transition: width .3s ease, background .3s ease; }
+        a { color: #a5b4fc; } a:hover { color: #fff; }
+        @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    </style>
 </head>
-<body class="bg-light">
-<div class="container mt-5" style="max-width: 450px;">
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <h2 class="mb-4">Create Account</h2>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<div class="auth-card">
+    <div class="brand"><i class="fas fa-brain me-2"></i>STYLEFORGE AI</div>
+    <div class="sub">Create your account to start creating art</div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
 
-            <form method="POST">
-                {{ form.hidden_tag() }}
-
-                <div class="mb-3">
-                    {{ form.username.label(class="form-label") }}
-                    {{ form.username(class="form-control",
-                                     autocomplete="username") }}
-                    {% for error in form.username.errors %}
-                        <div class="text-danger">{{ error }}</div>
-                    {% endfor %}
-                </div>
-
-                <div class="mb-3">
-                    {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-control",
-                                  autocomplete="email") }}
-                    {% for error in form.email.errors %}
-                        <div class="text-danger">{{ error }}</div>
-                    {% endfor %}
-                </div>
-
-                <div class="mb-3">
-                    {{ form.password.label(class="form-label") }}
-                    {{ form.password(class="form-control",
-                                     autocomplete="new-password") }}
-                    {% for error in form.password.errors %}
-                        <div class="text-danger">{{ error }}</div>
-                    {% endfor %}
-                    <small class="text-muted">
-                        Use at least 8 characters.
-                    </small>
-                </div>
-
-                {{ form.submit(class="btn btn-primary w-100") }}
-            </form>
-
-            <p class="mt-3 mb-0 text-center">
-                Already registered?
-                <a href="{{ url_for('login') }}">Log in</a>
-            </p>
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control", autocomplete="username", autofocus=true, placeholder="3–80 characters") }}
+            <div class="hint" id="userHint"></div>
+            {% for error in form.username.errors %}<div class="hint bad">{{ error }}</div>{% endfor %}
         </div>
-    </div>
+        <div class="mb-3">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control", autocomplete="email", placeholder="you@example.com") }}
+            <div class="hint" id="mailHint"></div>
+            {% for error in form.email.errors %}<div class="hint bad">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+            {{ form.password.label(class="form-label") }}
+            <div class="pw">
+                {{ form.password(class="form-control", autocomplete="new-password", placeholder="At least 8 characters") }}
+                <button type="button" aria-label="Show or hide password" aria-pressed="false"><i class="fas fa-eye"></i></button>
+            </div>
+            <div class="meter"><div id="meterBar"></div></div>
+            <div class="hint" id="pwHint">Use at least 8 characters.</div>
+            {% for error in form.password.errors %}<div class="hint bad">{{ error }}</div>{% endfor %}
+        </div>
+        {{ form.submit(class="btn btn-go w-100 mt-2") }}
+    </form>
+    <p class="mt-4 mb-0 text-center">Already registered? <a href="{{ url_for('login') }}">Log in</a></p>
 </div>
+</div>
+
+<script>
+(function () {
+    const $ = (s, r = document) => r.querySelector(s);
+    requestAnimationFrame(() => document.body.classList.add('page-ready'));
+    window.addEventListener('pageshow', e => { if (e.persisted) { document.body.classList.add('page-ready'); document.body.classList.remove('page-leaving'); } });
+    document.addEventListener('click', e => {
+        const a = e.target.closest('a[href]'); if (!a || a.target || e.metaKey || e.ctrlKey) return;
+        const u = new URL(a.href, location.href); if (u.origin !== location.origin) return;
+        e.preventDefault(); document.body.classList.add('page-leaving'); setTimeout(() => location.href = a.href, 250);
+    });
+
+    /* floating particles background */
+    const c = $('#bg'), x = c.getContext('2d'); let w, h, ps = [];
+    function size() { w = c.width = innerWidth; h = c.height = innerHeight; ps = Array.from({ length: Math.floor(w / 22) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4, hue: Math.random() * 360 })); }
+    addEventListener('resize', size); size();
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) (function loop() {
+        x.clearRect(0, 0, w, h);
+        ps.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.hue = (p.hue + .2) % 360; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1;
+            x.fillStyle = `hsla(${p.hue},70%,60%,.35)`; x.beginPath(); x.arc(p.x, p.y, 2.2, 0, 7); x.fill();
+            for (let j = i + 1; j < ps.length; j++) { const q = ps[j], d = Math.hypot(p.x - q.x, p.y - q.y);
+                if (d < 110) { x.strokeStyle = `hsla(${p.hue},70%,60%,${.14 * (1 - d / 110)})`; x.beginPath(); x.moveTo(p.x, p.y); x.lineTo(q.x, q.y); x.stroke(); } } });
+        requestAnimationFrame(loop);
+    })();
+
+    /* show / hide password */
+    document.querySelectorAll('.pw button').forEach(b => b.addEventListener('click', () => {
+        const i = b.parentElement.querySelector('input'); const show = i.type === 'password';
+        i.type = show ? 'text' : 'password'; b.innerHTML = '<i class="fas ' + (show ? 'fa-eye-slash' : 'fa-eye') + '"></i>'; b.setAttribute('aria-pressed', show);
+    }));
+
+    /* submit spinner (prevents double submits) */
+    const form = $('form'); const btn = $('input[type=submit]', form);
+    
+    /* live validation + password strength */
+    const u = $('#username'), m = $('#email'), p = $('#password');
+    const set = (el, hint, ok, msg) => { el.classList.toggle('is-valid', ok === true); el.classList.toggle('is-invalid', ok === false); hint.textContent = msg; hint.className = 'hint ' + (ok === true ? 'good' : ok === false ? 'bad' : ''); };
+    u.addEventListener('input', () => { const v = u.value.trim(); v.length === 0 ? set(u, $('#userHint'), null, '') : v.length < 3 ? set(u, $('#userHint'), false, 'At least 3 characters.') : set(u, $('#userHint'), true, 'Looks good.'); });
+    m.addEventListener('input', () => { const v = m.value.trim(); v.length === 0 ? set(m, $('#mailHint'), null, '') : /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? set(m, $('#mailHint'), true, 'Looks good.') : set(m, $('#mailHint'), false, 'Enter a valid email address.'); });
+    p.addEventListener('input', () => {
+        const v = p.value; let s = 0;
+        if (v.length >= 8) s++; if (v.length >= 12) s++; if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^A-Za-z0-9]/.test(v)) s++;
+        const lv = [['0%', '#ef4444', 'Use at least 8 characters.'], ['25%', '#ef4444', 'Weak'], ['50%', '#f59e0b', 'Fair'], ['75%', '#84cc16', 'Good'], ['100%', '#10b981', 'Strong'], ['100%', '#10b981', 'Strong']][v.length ? Math.max(1, Math.min(s, 5)) : 0];
+        $('#meterBar').style.width = lv[0]; $('#meterBar').style.background = lv[1];
+        set(p, $('#pwHint'), v.length === 0 ? null : v.length >= 8, lv[2]);
+    });
+
+    form.addEventListener('submit', () => { if (btn) { setTimeout(() => { btn.disabled = true; btn.value = 'Creating account…'; }, 0); } });
+})();
+</script>
 </body>
 </html>
