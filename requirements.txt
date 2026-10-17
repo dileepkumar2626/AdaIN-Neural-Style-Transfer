@@ -10,3 +10,7 @@ torchaudio==2.2.2
 Werkzeug==3.1.4
 WTForms==3.2.1
 gunicorn
+Flask-SQLAlchemy
+Flask-Login
+psycopg[binary]
+python-dotenv
