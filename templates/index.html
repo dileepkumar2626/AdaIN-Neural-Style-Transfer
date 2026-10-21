@@ -126,8 +126,6 @@
             box-shadow: 0 0 5px #a855f7;
         }
     }
-
-    /* Custom Range Slider */
     .range-wrap {
         position: relative;
         margin: 2rem auto;
@@ -229,8 +227,6 @@
     .form-control::file-selector-button:hover {
         background-color: #475569;
     }
-
-    /* Custom Scrollbar */
     ::-webkit-scrollbar {
         width: 10px;
     }
@@ -247,8 +243,6 @@
     ::-webkit-scrollbar-thumb:hover {
         background: #818cf8;
     }
-
-    /* Ambient Orbs */
     .orb {
         position: fixed;
         border-radius: 50%;
@@ -295,8 +289,6 @@
             transform: translate(50px, 50px) scale(1.1);
         }
     }
-
-    /* Scanline Effect */
     .scanlines {
         position: fixed;
         top: 0;
@@ -309,8 +301,6 @@
         pointer-events: none;
         opacity: 0.6;
     }
-
-    /* Background Canvas */
     #neuralCanvas {
         position: fixed;
         top: 0;
@@ -327,8 +317,6 @@
         position: relative;
         z-index: 1;
     }
-
-    /* Animations */
     .fade-in-up {
         animation: fadeInUp 0.8s ease-out forwards;
         opacity: 0;
@@ -341,8 +329,6 @@
             transform: translateY(0);
         }
     }
-
-    /* Loader */
     .loader-overlay {
         position: fixed;
         top: 0;
@@ -386,8 +372,6 @@
             transform: rotate(360deg);
         }
     }
-
-    /* Navbar Styles */
     .navbar {
         background: rgba(15, 23, 42, 0.8);
         backdrop-filter: blur(10px);
@@ -429,8 +413,6 @@
     .nav-link:hover::after {
         width: 100%;
     }
-
-    /* Footer Styles */
     .footer-section {
         background: rgba(15, 23, 42, 0.95);
         border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -578,7 +560,6 @@
     }
 </style>
 <style>
-    /* ===== Interactive layer ===== */
     html { scroll-behavior: smooth; }
     body { opacity: 0; transition: opacity .35s ease; }
     body.page-ready { opacity: 1; }
@@ -593,8 +574,6 @@
     .reveal { opacity: 0; transform: translateY(28px); animation: none !important;
         transition: opacity .7s ease, transform .7s ease; }
     .reveal.in { opacity: 1; transform: none; }
-
-    /* Drag & drop zones */
     .preview-image { cursor: pointer; position: relative; transition: border-color .2s, background .2s, transform .2s; }
     .preview-image:hover { border-color: #818cf8; }
     .preview-image.drag-over { border-color: #c084fc; background: rgba(168, 85, 247, .12); transform: scale(1.015); }
@@ -607,14 +586,10 @@
     .preview-image.has-image .dz-clear { display: flex; }
     .dz-badge { position: absolute; left: 8px; bottom: 8px; font-size: .75rem; padding: 3px 10px; border-radius: 20px;
         background: rgba(15, 23, 42, .85); color: #cbd5e1; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; z-index: 2; }
-
-    /* Loader progress */
     .progress-box { width: min(380px, 80vw); text-align: center; margin-top: 8px; }
     .progress-box .progress { height: 10px; background: rgba(255, 255, 255, .1); border-radius: 10px; }
     .progress-box .progress-bar { background: linear-gradient(90deg, #6366f1, #c084fc); transition: width .2s ease; }
     #loaderStatus { margin: 12px 0 0; color: #cbd5e1; font-size: .95rem; min-height: 1.4em; }
-
-    /* Result card + before/after slider */
     .result-card { overflow: hidden; }
     .result-reveal { animation: resultIn .6s cubic-bezier(.2, .8, .2, 1) both; }
     @keyframes resultIn { from { opacity: 0; transform: translateY(30px) scale(.97); } to { opacity: 1; transform: none; } }
@@ -643,8 +618,6 @@
     .toast-item.out { animation: toastOut .3s ease both; }
     @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
     @keyframes toastOut { to { opacity: 0; transform: translateX(40px); } }
-
-    /* Lightbox */
     .lightbox { position: fixed; inset: 0; background: rgba(2, 6, 23, .92); z-index: 12000; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
     .lightbox.open { display: flex; animation: fadeIn .25s ease; }
     .lightbox img { max-width: 94vw; max-height: 92vh; border-radius: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
@@ -685,9 +658,6 @@
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
-
-    
-
     <div class="header-section" id="top">
         <div class="container">
             <h1 class="display-4 fw-bold">STYLEFORGE AI</h1>
@@ -702,7 +672,6 @@
             {{ form.hidden_tag() }}
 
             <div class="row g-4">
-                <!-- Content Image Section -->
                 <div class="col-md-6">
                     <div class="card h-100">
                         <div class="card-header text-center py-3">Content Source</div>
@@ -939,8 +908,6 @@
             </div>
         </div>
     </footer>
-
-    <!-- Loading Overlay -->
     <div class="loader-overlay" id="loader">
         <div class="cyber-spinner mb-4"></div>
         <h3 class="text-white" style="font-family: 'Orbitron', sans-serif; letter-spacing: 2px;">PROCESSING</h3>
@@ -953,7 +920,6 @@
     </div>
 
     <style>
-        /* Typing Animation Keyframes */
         @keyframes typing {
             from {
                 width: 0
@@ -985,7 +951,6 @@
             const reader = new FileReader();
 
             reader.addEventListener("load", function () {
-                // Convert image file to base64 string
                 preview.innerHTML = `<img src="${reader.result}" alt="Image Preview">`;
             }, false);
 
@@ -993,13 +958,10 @@
                 reader.readAsDataURL(file);
             }
         }
-
-        // Restore previews if page reloads with data (optional enhancement)
         window.onload = function () {
             if (document.getElementById('resultSection')) {
                 document.getElementById('resultSection').scrollIntoView({ behavior: "smooth" });
             }
-            // Neural Network Background Animation
             const canvas = document.getElementById('neuralCanvas');
             const ctx = canvas.getContext('2d');
             let width, height;
@@ -1019,15 +981,12 @@
                     this.vx = (Math.random() - 0.5) * 0.5;
                     this.vy = (Math.random() - 0.5) * 0.5;
                     this.size = Math.random() * 3 + 1.5;
-                    // Assign one of 10 colors to group nodes
                     this.hue = Math.floor(Math.random() * 10) * 36;
                     this.density = (Math.random() * 30) + 1;
                 }
                 update() {
                     this.x += this.vx;
                     this.y += this.vy;
-
-                    // Mouse interaction
                     if (mouse.x != null) {
                         let dx = mouse.x - this.x;
                         let dy = mouse.y - this.y;
@@ -1042,7 +1001,6 @@
                             this.y -= directionY;
                         }
                     }
-
                     if (this.x < 0 || this.x > width) this.vx *= -1;
                     if (this.y < 0 || this.y > height) this.vy *= -1;
                     this.hue = (this.hue + 0.2) % 360;
@@ -1089,8 +1047,6 @@
             });
             resize();
             initParticles();
-            animate();
-            // Range Slider Logic
             const range = document.getElementById('alphaRange');
             const rangeValue = document.getElementById('rangeValue');
 
@@ -1101,12 +1057,9 @@
                 const percentage = ((val - min) * 100) / (max - min);
 
                 rangeValue.textContent = val;
-                // Adjust position of the bubble to follow the thumb
                 const thumbWidth = 24;
                 const offset = thumbWidth / 2 - (percentage * thumbWidth / 100);
                 rangeValue.style.left = `calc(${percentage}% + ${offset}px)`;
-
-                // Update gradient background
                 range.style.background = `linear-gradient(to right, #818cf8 0%, #c084fc ${percentage}%, rgba(30, 41, 59, 0.8) ${percentage}%, rgba(30, 41, 59, 0.8) 100%)`;
             }
 
@@ -1144,8 +1097,6 @@
         setTimeout(close, ms);
     }
     window.appToast = toast;
-
-    /* ---------- lightbox ---------- */
     const lb = $('#lightbox'), lbImg = $('#lbImg');
     function openLightbox(src) { lbImg.src = src; lb.classList.add('open'); }
     function closeLightbox() { lb.classList.remove('open'); }
@@ -1155,8 +1106,6 @@
         const img = e.target.closest('img[data-zoom], img.example-image, .example-image img');
         if (img && !img.closest('.preview-image')) openLightbox(img.currentSrc || img.src);
     });
-
-    /* ---------- page transitions + reveal on scroll ---------- */
     requestAnimationFrame(() => document.body.classList.add('page-ready'));
     window.addEventListener('pageshow', e => { if (e.persisted) document.body.classList.add('page-ready'); document.body.classList.remove('page-leaving'); });
     document.addEventListener('click', e => {
@@ -1174,8 +1123,6 @@
     $$('.examples-section, .faq-section, .footer-section').forEach(el => {
         if (io) { el.classList.add('reveal'); io.observe(el); }
     });
-
-    /* ---------- drag & drop upload zones ---------- */
     const form = $('#uploadForm');
     const zones = [
         { box: $('#contentPreview'), input: $('#content'), hidden: $('#content_path'), label: 'content', placeholder: 'Select Content Image' },
@@ -1225,7 +1172,7 @@
         if (!file || !validate(file, zone)) { if (file) zone.input.value = ''; return; }
         const dt = new DataTransfer(); dt.items.add(file);
         zone.input.files = dt.files;
-        zone.hidden.value = '';           // a fresh upload replaces any reused image
+        zone.hidden.value = '';        
         showFile(zone, file);
     }
     zones.forEach(zone => {
@@ -1241,12 +1188,9 @@
         ['dragleave', 'drop'].forEach(ev => zone.box.addEventListener(ev, e => { e.preventDefault(); zone.box.classList.remove('drag-over'); }));
         zone.box.addEventListener('drop', e => handleFiles(zone, e.dataTransfer.files));
         zone.input.addEventListener('change', () => handleFiles(zone, zone.input.files));
-        zone.input.style.display = 'none';      // the whole preview box is the picker now
+        zone.input.style.display = 'none';     
     });
-    // Stop the browser from navigating away if a file is dropped outside a zone.
     ['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => { if (!e.target.closest('.preview-image')) e.preventDefault(); }));
-
-    /* ---------- result card with before/after slider ---------- */
     const mount = $('#resultMount');
     function renderResult(d) {
         mount.innerHTML =
@@ -1278,7 +1222,6 @@
             cmp.classList.add('animating'); range.value = v; setPos(v);
             $$('.view-tabs .btn', mount).forEach(b => b.classList.toggle('active', b === btn));
         }));
-        // little intro sweep so people notice it is draggable
         cmp.classList.add('animating'); setPos(100);
         setTimeout(() => setPos(50), 350);
         setTimeout(() => cmp.classList.remove('animating'), 1000);
@@ -1295,13 +1238,10 @@
     const INITIAL = {{ initial|tojson }};
     if (INITIAL && INITIAL.result_url) renderResult(INITIAL);
     if (INITIAL && INITIAL.error) showError(INITIAL.error);
-
-    /* ---------- AJAX submit with upload progress ---------- */
     const loader = $('#loader'), bar = $('#loaderBar'), status = $('#loaderStatus');
     const submitBtn = form.querySelector('[type=submit]');
     const phases = ['Encoding content features…', 'Matching style statistics (AdaIN)…', 'Decoding the stylized image…', 'Almost there…'];
-    let xhr = null, phaseTimer = null;
-
+    let xhr = null, phaseTimer = null
     function setLoading(on) {
         loader.classList.toggle('active', on);
         submitBtn.disabled = on;

@@ -8,9 +8,6 @@ class ImageFolderdataset(Dataset):
         super().__init__()
         self.root = root
         self.transform = transform
-        # Decode JPEGs at (about) the size we will resize to. Huge paintings
-        # (WikiArt is often 2000+ px) decode 2-4x faster this way, and the
-        # result is still >= draft_size on both sides, so quality is unchanged.
         self.draft_size = draft_size
         files = sorted(
             p for p in os.listdir(root)

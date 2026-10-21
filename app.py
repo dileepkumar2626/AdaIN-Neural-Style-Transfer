@@ -292,7 +292,7 @@ encoder = VGGEncoder(str(BASE_DIR / "vgg_normalised.pth")).to(device)
 decoder = Decoder().to(device)
 decoder.load_state_dict(
     torch.load(
-        BASE_DIR / "experiment" / "experiment1" / "decoder_156.pth",
+        BASE_DIR / "experiment" / "experiment1" / "decoder_100.pth",
         map_location=device
     )
 )
