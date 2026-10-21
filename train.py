@@ -41,7 +41,7 @@ def main():
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cuda":
         print(f"Training on GPU: {torch.cuda.get_device_name(0)}")
-        torch.backends.cudnn.benchmark = True   # input size is fixed -> faster conv kernels
+        torch.backends.cudnn.benchmark = True
     else:
         print("WARNING: CUDA is not available, training on the CPU (this is 20-50x slower). "
               "Install the CUDA build of PyTorch: https://pytorch.org/get-started/locally/")
@@ -54,8 +54,6 @@ def main():
     style_transform=get_transform(args.style_size,args.crop,args.final_size)
     content_dataset=ImageFolderdataset(args.content_dir,content_transform,draft_size=args.content_size)
     style_dataset=ImageFolderdataset(args.style_dir,style_transform,draft_size=args.style_size)
-    # Loading + resizing JPEGs is the real bottleneck. With num_workers=0 (the old
-    # default) the GPU sat idle while the main process decoded every image.
     loader_kwargs=dict(
         batch_size=args.batch_size,shuffle=True,drop_last=True,
         num_workers=args.num_workers,pin_memory=(device.type=="cuda"),
@@ -79,18 +77,16 @@ def main():
     steps_per_epoch=min(len(content_dataloader),len(style_datalaoder))
     for epoch in range(args.epochs):
         progress_bar=tqdm(zip(content_dataloader,style_datalaoder),total=steps_per_epoch)
-        # Accumulate on the GPU: calling .item() every step forces a GPU sync
-        # (the old loop did it 6 times per step) and stalls the pipeline.
         running=torch.zeros(3,device=device)
         for step,(content_batch,style_batch) in enumerate(progress_bar):
             content_batch=content_batch.to(device,non_blocking=True)
             style_batch=style_batch.to(device,non_blocking=True)
-            with torch.no_grad():                      # encoder is frozen: build no graph for it
+            with torch.no_grad():                     
                 c_feats=encoder(content_batch)
                 s_feats=encoder(style_batch)
                 t=adaptive_instance_normalizaiton(c_feats[-1],s_feats[-1])
             g=decoder(t)
-            g_feats=encoder(g)                         # gradients must flow through this one
+            g_feats=encoder(g)                        
             loss_c=mse_loss(g_feats[-1],t)*args.content_weight
             loss_s=0
             for g_f,s_f in zip(g_feats,s_feats):
@@ -105,7 +101,7 @@ def main():
             losses=torch.stack([loss.detach(),loss_c.detach(),loss_s.detach()])
             running+=losses
             if step%args.log_steps==0:
-                l,lc,ls=losses.tolist()                # single sync every log_steps
+                l,lc,ls=losses.tolist()                
                 progress_bar.set_description(f'Loss:{l:4f}, Content Loss: {lc:4f}, Style Loss: {ls:4f}')
         scheduler.step()
         running_loss,running_closs,running_sloss=(running/steps_per_epoch).tolist()   # per-step average

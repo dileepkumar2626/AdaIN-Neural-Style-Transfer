@@ -36,10 +36,6 @@ from utils.models import VGGEncoder, Decoder
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
-
-# --------------------------------------------------
-# Configuration
-# --------------------------------------------------
 load_dotenv()
 
 app = Flask(__name__)
@@ -67,7 +63,6 @@ def normalise_database_url(url):
 
 database_url = os.environ.get("DATABASE_URL")
 if not database_url:
-    # Local-development fallback so the app still starts without Postgres.
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
     database_url = f"sqlite:///{Path(app.instance_path) / 'app.db'}"
     logger.warning("DATABASE_URL not set; using local SQLite database.")
@@ -76,10 +71,6 @@ database_url = normalise_database_url(database_url)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# FIX: hosted Postgres (Render, Neon, Supabase, Heroku...) silently closes idle
-# connections -> "server closed the connection unexpectedly" on the next request.
-# pool_pre_ping tests a connection before use; pool_recycle retires old ones.
 if not database_url.startswith("sqlite"):
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "pool_pre_ping": True,
@@ -89,33 +80,22 @@ if not database_url.startswith("sqlite"):
     }
 
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
-# The page is now interactive (AJAX) and can stay open for a long time; a CSRF
-# token with the default 1-hour limit would make the next transfer fail.
 app.config["WTF_CSRF_TIME_LIMIT"] = None
 app.config["ALLOWED_EXTENSIONS"] = {"png", "jpg", "jpeg"}
-
-# Keep uploaded files outside the public static directory.
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 UPLOAD_ROOT = Path(app.instance_path) / "user_uploads"
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 db = SQLAlchemy()
 db.init_app(app)
-migrate = Migrate(app, db)  # schema migrations: flask db init / migrate / upgrade
+migrate = Migrate(app, db)  
 Bootstrap(app)
 
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.login_message = "Please log in to use style transfer."
 login_manager.init_app(app)
-
-
-# --------------------------------------------------
-# Database models
-# --------------------------------------------------
 class User(UserMixin, db.Model):
-    # FIX: "user" is a reserved word in PostgreSQL. It only worked because
-    # SQLAlchemy quotes it; any raw SQL / psql / BI tool breaks. Use "users".
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -147,8 +127,6 @@ class StyleTransfer(db.Model):
     __tablename__ = "style_transfers"
 
     id = db.Column(db.Integer, primary_key=True)
-    # FIX: ondelete="CASCADE" so the DB itself removes history rows when a user
-    # is deleted (the ORM cascade alone doesn't cover raw/bulk deletes).
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
@@ -163,7 +141,7 @@ class StyleTransfer(db.Model):
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
-        index=True,  # history is ordered by this column
+        index=True,
     )
 
 
@@ -177,10 +155,6 @@ def load_user(user_id):
         db.session.rollback()
         logger.exception("Database error while loading user")
         return None
-
-
-# FIX: after any failed DB operation the session is left in a broken state;
-# always return the connection to the pool cleanly at the end of a request.
 @app.teardown_request
 def cleanup_session(exc):
     if exc is not None:
@@ -217,11 +191,6 @@ def handle_too_large(exc):
 def render_template_string_safe(message):
     from markupsafe import escape
     return f"<h3>{escape(message)}</h3>"
-
-
-# --------------------------------------------------
-# Forms
-# --------------------------------------------------
 class RegistrationForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired(), Length(min=3, max=80)])
     email = StringField("Email", validators=[DataRequired(), Length(max=255)])
@@ -242,11 +211,6 @@ class UploadForm(FlaskForm):
     style_path = HiddenField()
     alpha = FloatField("Alpha", default=1.0)
     submit = SubmitField("Transfer Style")
-
-
-# --------------------------------------------------
-# Authentication routes
-# --------------------------------------------------
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -268,8 +232,7 @@ def register():
                     db.func.lower(User.email) == email
                 )
             )
-        ).scalars().first()  # FIX: scalar_one_or_none() raises if 2 rows match
-                             # (one row matches username, another matches email)
+        ).scalars().first()
         if existing:
             flash("That username or email is already registered.", "danger")
             return render_template("register.html", form=form)
@@ -280,8 +243,6 @@ def register():
         try:
             db.session.commit()
         except IntegrityError:
-            # FIX: two simultaneous sign-ups can both pass the check above;
-            # the unique constraint then fires. Handle it instead of a 500.
             db.session.rollback()
             flash("That username or email is already registered.", "danger")
             return render_template("register.html", form=form)
@@ -326,20 +287,12 @@ def logout():
     logout_user()
     flash("You have logged out.", "success")
     return redirect(url_for("login"))
-
-
-# --------------------------------------------------
-# AdaIN model initialisation
-# --------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# FIX: paths were relative to the current working directory, so running
-# gunicorn from anywhere but the repo root crashed at import time.
 encoder = VGGEncoder(str(BASE_DIR / "vgg_normalised.pth")).to(device)
 decoder = Decoder().to(device)
 decoder.load_state_dict(
     torch.load(
-        BASE_DIR / "experiment" / "experiment1" / "decoder_90.pth",
+        BASE_DIR / "experiment" / "experiment1" / "decoder_156.pth",
         map_location=device
     )
 )
@@ -399,11 +352,6 @@ def style_transfer(content_image, style_image, encoder, decoder, alpha, device):
 def save_image(image, path):
     image = image.cpu().clone().squeeze(0).clamp(0, 1)
     transforms.ToPILImage()(image).save(path)
-
-
-# --------------------------------------------------
-# Main style-transfer page
-# --------------------------------------------------
 @app.route("/", methods=["GET", "POST"])
 @login_required
 def index():
@@ -457,8 +405,6 @@ def index():
             result_filename = f"{uuid.uuid4().hex}_result.png"
             result_path = user_upload_dir() / result_filename
             save_image(stylized_image, result_path)
-
-            # Record history only after successful image generation.
             record = StyleTransfer(
                 user_id=current_user.id,
                 content_filename=content_filename,
@@ -472,14 +418,10 @@ def index():
             result_image = result_filename
 
         except ValueError as exc:
-            # User-facing validation errors are safe to show.
             db.session.rollback()
             error = str(exc)
 
         except SQLAlchemyError:
-            # FIX: previously str(exc) of a DB error (with SQL, table names,
-            # sometimes the connection string) was shown to the user, and the
-            # generated result file was left on disk with no DB record.
             db.session.rollback()
             logger.exception("Could not save style-transfer history")
             if result_path is not None and result_path.exists():
@@ -490,10 +432,6 @@ def index():
             db.session.rollback()
             logger.exception("Style transfer failed")
             error = "Style transfer failed. Please try different images."
-
-    # FIX: the hidden content_path/style_path fields were never filled in, so
-    # "reuse the images I already uploaded" always failed with "Please upload a
-    # valid content image." Re-populate them so a second run works.
     if content_filename:
         form.content_path.data = content_filename
     if style_filename:
@@ -532,11 +470,6 @@ def index():
         style_image=style_filename,
         error=error
     )
-
-
-# --------------------------------------------------
-# User-specific image access and history
-# --------------------------------------------------
 @app.route("/uploads/<filename>")
 @login_required
 def send_image(filename):
@@ -550,7 +483,6 @@ def send_image(filename):
 @login_required
 def history():
     page = request.args.get("page", 1, type=int)
-    # FIX: the query was unbounded (loads every row for the user). Paginate.
     pagination = db.paginate(
         db.select(StyleTransfer)
         .where(StyleTransfer.user_id == current_user.id)
@@ -558,16 +490,11 @@ def history():
         page=page, per_page=20, error_out=False,
     )
     transfers = pagination.items
-
-    # FIX: DB rows can outlive their files (ephemeral disks on Render/Heroku,
-    # manual cleanup). Flag them so the template can avoid broken <img> tags:
-    #   {% if t.files_ok %} <img ...> {% else %} file no longer available {% endif %}
     for t in transfers:
         t.files_ok = all(
             existing_user_image(name) is not None
             for name in (t.content_filename, t.style_filename, t.output_filename)
         )
-
     return render_template(
         "history.html", transfers=transfers, pagination=pagination
     )
@@ -576,7 +503,6 @@ def history():
 @app.route("/history/<int:transfer_id>/delete", methods=["POST"])
 @login_required
 def delete_transfer(transfer_id):
-    # Ownership is enforced in the query: you can only delete your own rows.
     record = db.session.execute(
         db.select(StyleTransfer).where(
             StyleTransfer.id == transfer_id,
@@ -602,9 +528,6 @@ def delete_transfer(transfer_id):
             return jsonify(ok=False, error="Could not delete. Try again."), 500
         flash("Could not delete that transfer. Try again.", "danger")
         return redirect(url_for("history"))
-
-    # Delete files only AFTER the DB commit succeeded, and never a file another
-    # of this user's history rows still uses (inputs can be reused).
     remaining = db.session.execute(
         db.select(
             StyleTransfer.content_filename,
@@ -627,21 +550,12 @@ def delete_transfer(transfer_id):
 @app.route("/examples/<path:filename>")
 def send_example(filename):
     return send_from_directory(BASE_DIR / "examples", filename)
-
-
-# --------------------------------------------------
-# Database initialisation
-# --------------------------------------------------
-# FIX: db.create_all() ran unconditionally at import. With gunicorn -w N every
-# worker raced to create the same tables (duplicate-table errors), and an
-# unreachable DB crashed the import with no clear message. It is now opt-out,
-# wrapped, and meant for first-run/dev only; use `flask db upgrade` in production.
 if os.environ.get("AUTO_CREATE_DB", "1") == "1":
     with app.app_context():
         try:
             db.create_all()
         except IntegrityError:
-            db.session.rollback()  # another worker created the tables first
+            db.session.rollback() 
         except SQLAlchemyError:
             logger.exception(
                 "Could not connect to the database. Check DATABASE_URL."
