@@ -1,289 +1,472 @@
+# 🎨 StyleForge AI — Neural Style Transfer with AdaIN
 
-<div align="center">
+**Transform ordinary photographs into artistic images using deep learning.** StyleForge AI combines Adaptive Instance Normalization (AdaIN), PyTorch, and a Flask web application to transfer the visual characteristics of an artwork onto a photograph — without retraining the model for every new style.
 
-# 🎨 StyleForge AI — AdaIN Neural Style Transfer
+<p align="center">
+  <img src="examples/brad%20pitt.jpg" width="30%" alt="Original content photograph">
+  <img src="examples/picasso%20seated%20nude%20hr.jpg" width="30%" alt="Artistic style reference">
+  <img src="examples/stylized_brad_pitt.jpg" width="30%" alt="Neural style transfer result">
+</p>
 
-**Turn any photo into art in real time. Upload a content image, pick a style, and watch a neural network repaint it.**
+<p align="center">
+  <em>Content image → Style reference → Stylized result</em>
+</p>
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.2-EE4C2C?logo=pytorch&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-4169E1?logo=postgresql&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
-
-</div>
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/PyTorch-2.2.2-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch">
+  <img src="https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white" alt="Flask">
+  <img src="https://img.shields.io/badge/Computer_Vision-Deep_Learning-8A2BE2" alt="Computer Vision">
+  <img src="https://img.shields.io/badge/Inference-CPU%20%7C%20CUDA-76B900?logo=nvidia&logoColor=white" alt="CPU and CUDA">
+</p>
 
 ---
 
 ## ✨ Overview
 
-This project is a full-stack web app built around **Adaptive Instance Normalization (AdaIN)**, the arbitrary style transfer method from
-[*Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization*](https://arxiv.org/abs/1703.06868) (Huang & Belongie, ICCV 2017).
+StyleForge AI is a deep learning application built around **Arbitrary Neural Style Transfer**. It separates the content of an image from its visual appearance and combines them to create a new artistic result.
 
-Unlike older style transfer methods that need a new model for every style, AdaIN works with **any** style image in a single forward pass, so results come back in seconds, and you can blend content and style with a strength slider.
+For example, you can take a photograph of a person and apply the colors, textures, and visual patterns of a painting while preserving recognizable structures from the original photograph.
 
-On top of the model there is a complete, interactive Flask application with user accounts, a personal history, and a polished UI.
+Unlike traditional optimization-based neural style transfer, which may require repeatedly optimizing an image, AdaIN enables efficient stylization using a pretrained encoder and a trained decoder.
 
-> 📸 *Add screenshots here: home page, before/after slider, history page.*
-> Example: `![Home](docs/home.png)`
-
----
+The project brings the model into a web application where users can register, upload images, choose their desired style, adjust stylization strength, generate results, and revisit previous transformations.
 
 ## 🚀 Features
 
-### 🖼️ Style transfer
-- **Any content + any style:** no retraining needed.
-- **Style strength (alpha) slider (0 → 1):** smoothly blend between the original photo and full stylization.
-- **Fast inference** on CPU, faster on GPU (CUDA is detected automatically).
+### 🧠 AI-powered image stylization
 
-### 🖱️ Interactive interface
-- **Drag-and-drop uploads** with instant previews, validation (PNG/JPG, 10 MB total) and one-click removal.
-- **No page reloads:** live upload progress bar, status messages and a cancel button.
-- **Before/after comparison slider** (mouse, touch and keyboard) with Compare / Stylized / Original views.
-- **Click-to-enlarge** lightbox, download button, toast notifications and smooth animations.
-- **Reuse uploaded images:** tweak the strength and re-run without uploading again.
+- **Arbitrary style transfer:** Use different style-reference images without retraining the network for each style.
+- **Adaptive Instance Normalization:** Align content-feature statistics with those of the style image.
+- **Adjustable stylization strength:** Control the balance between original content features and stylized features using the alpha parameter.
+- **Deep feature extraction:** Use a pretrained, normalized VGG-19 encoder.
+- **Custom decoder:** Reconstruct stylized images from transformed feature representations.
+- **CPU and NVIDIA CUDA support:** Run inference on compatible hardware with GPU acceleration when available.
 
-### 👤 Accounts and history
-- Register / login with hashed passwords and CSRF protection.
-- **Personal history** of every transfer with search, strength filter, sorting and pagination.
-- **Gallery viewer** with previous/next (arrow keys and swipe) and Content / Style / Result tabs.
-- **Delete with confirmation:** removes the database record and its files (shared input images are kept while another record still uses them).
-- Each user can only see and delete their own images.
+### 🌐 Interactive web application
 
-### 🛡️ Robust backend
-- PostgreSQL or SQLite via SQLAlchemy 2.x, with connection pre-ping for hosted databases.
-- Flask-Migrate (Alembic) ready for schema migrations.
-- Safe uploads: extension checks, unique filenames, per-user private storage outside the public static folder.
-- Clean JSON error responses for the interactive front-end, with a normal form-post fallback.
+- Upload content and style images through a browser interface.
+- Preview and compare original and generated images.
+- Adjust style strength and generate different variations.
+- Reuse images for additional experiments.
+- Download generated results.
+- Explore example images and artistic styles.
 
----
+### 👤 User accounts and image history
 
-## 🧠 How it works
+- User registration and login.
+- Hashed passwords and CSRF-protected forms.
+- Password-reset workflow.
+- Personal history of previous style transfers.
+- View and delete saved transfer records.
+- Per-user access controls for stored images.
 
-```
- Content image ──► VGG encoder ──► content features ─┐
-                                                      ├─► AdaIN ──► (× alpha blend) ──► Decoder ──► Stylized image
- Style image   ──► VGG encoder ──► style features ───┘
-```
+### 🛠️ Model training and experimentation
 
-AdaIN aligns the channel-wise **mean and variance** of the content features to those of the style features:
-
-```
-AdaIN(x, y) = σ(y) · ( (x − μ(x)) / σ(x) ) + μ(y)
-```
-
-The result is then blended with the original content features using `alpha` and passed through a trained decoder that maps the features back to an image:
-
-```
-t = alpha · AdaIN(f_content, f_style) + (1 − alpha) · f_content
-```
-
-- **Encoder:** pretrained, frozen VGG-19 (up to `relu4_1`).
-- **Decoder:** mirrored architecture trained with a content loss and a style loss.
+- Train the decoder using your own content and style datasets.
+- Configure training parameters, including epochs, batch size, learning rate, and loss weights.
+- Save model checkpoints and resume experiments where supported by the training configuration.
+- Explore model behavior and intermediate features using the included Jupyter notebook.
 
 ---
 
-## 🗂️ Project structure
+## 🧠 How It Works
 
+StyleForge AI uses **Adaptive Instance Normalization (AdaIN)**, introduced by Huang and Belongie in their 2017 paper, *Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization*.
+
+### Architecture
+
+```text
+                     CONTENT IMAGE
+                           |
+                           v
+                    +-------------+
+                    |  VGG-19     |
+                    |   Encoder   |
+                    +-------------+
+                           |
+                     Content Features
+                           |
+                           +-------------------+
+                                               |
+                                               v
+                                        +-------------+
+                     Style Features --> |    AdaIN    |
+                                               |
+                                               v
+                                        Alpha Blending
+                                               |
+                                               v
+                                        +-------------+
+                                        |   Decoder   |
+                                        +-------------+
+                                               |
+                                               v
+                                      STYLIZED IMAGE
 ```
+
+The style image passes through the same encoder to extract its feature statistics. AdaIN then aligns the channel-wise mean and variance of the content features with those of the style features.
+
+### 1. Feature extraction
+
+A pretrained VGG-19 network extracts hierarchical visual representations from both images. Its convolutional features capture image structure, textures, colors, and other visual patterns.
+
+### 2. Adaptive Instance Normalization
+
+Given content features \(x\) and style features \(y\), AdaIN is defined as:
+
+\[
+\operatorname{AdaIN}(x,y)=
+\sigma(y)\left(\frac{x-\mu(x)}{\sigma(x)}\right)+\mu(y)
+\]
+
+Here, \(\mu\) and \(\sigma\) represent channel-wise means and standard deviations.
+
+This operation transfers the feature statistics of the style image to the content representation.
+
+### 3. Style-strength control
+
+The transformed representation is blended with the original content features:
+
+\[
+t=\alpha\,\operatorname{AdaIN}(x,y)+(1-\alpha)x
+\]
+
+Where:
+
+- \(\alpha=0\): preserve the original content features.
+- \(\alpha=0.5\): use an intermediate level of stylization.
+- \(\alpha=1\): use the fully transformed feature representation.
+
+### 4. Image reconstruction
+
+The trained decoder transforms the blended feature representation back into image space, producing the final stylized image.
+
+**Important:** The decoder is trained beforehand. Generating an image is an inference operation, not a training operation. The model therefore does not need to be retrained every time a user changes the content image or style reference.
+
+---
+
+## 🖼️ Example Results
+
+The repository includes sample photographs, style references, and generated outputs.
+
+| Content image | Style reference | Generated result |
+|---|---|---|
+| `examples/brad pitt.jpg` | `examples/picasso seated nude hr.jpg` | `examples/stylized_brad_pitt.jpg` |
+| `examples/sketch.png` | Your chosen artwork | Generate using the web application |
+
+Use the included examples to explore the project's capabilities. Actual results depend on the chosen images, decoder checkpoint, input resolution, and alpha value.
+
+---
+
+## 🧰 Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Core application and model implementation |
+| PyTorch | Deep learning and model inference |
+| Torchvision | Vision-model utilities and image transformations |
+| VGG-19 | Pretrained feature extraction |
+| Adaptive Instance Normalization | Feature-statistics-based style transfer |
+| Pillow | Image loading and processing |
+| Flask | Web application and backend routes |
+| Flask-Login | User authentication and session management |
+| Flask-WTF / WTForms | Forms and CSRF protection |
+| Flask-SQLAlchemy | Database integration |
+| SQLAlchemy | Database ORM |
+| Flask-Migrate | Database schema migrations |
+| SQLite / PostgreSQL | Persistent application data |
+| Jupyter Notebook | Experiments and model exploration |
+
+---
+
+## 📂 Project Structure
+
+```text
 AdaIN-Neural-Style-Transfer/
-├── app.py                  # Flask app: auth, routes, DB models, inference
-├── train.py                # Train the decoder on your own datasets
+│
+├── app.py
+├── train.py
 ├── requirements.txt
-├── .env.example            # Environment variable template
-├── code.ipynb              # Notebook experiments
+├── code.ipynb
+│
 ├── utils/
-│   ├── models.py           # VGG encoder + decoder
-│   └── utils.py            # AdaIN operation and helpers
+│   ├── models.py
+│   └── utils.py
+│
 ├── templates/
-│   ├── index.html          # Style transfer page
-│   ├── history.html        # User history / gallery
+│   ├── index.html
 │   ├── login.html
-│   └── register.html
+│   ├── register.html
+│   ├── forgot_password.html
+│   ├── reset_password.html
+│   └── history.html
+│
+├── static/
+│   └── styles/
+│       ├── styles.json
+│       ├── thumbs/
+│       └── [style images]
+│
+├── examples/
+│   ├── brad pitt.jpg
+│   ├── picasso seated nude hr.jpg
+│   ├── sketch.png
+│   └── [stylized examples]
+│
 ├── experiment/
-│   └── experiment1/decoder_10.pth   # Trained decoder weights (not tracked by git)
-├── examples/               # Example images shown on the home page
-├── vgg_normalised.pth      # Pretrained VGG weights (not tracked by git)
-└── instance/               # Created at runtime: SQLite DB + per-user uploads
+│   └── experiment1/
+│       └── [trained decoder checkpoint]
+│
+└── tools/
+    └── generate_styles.py
 ```
+
+**Model weights and datasets:** The pretrained VGG weights, trained decoder checkpoints, and training datasets may need to be obtained separately. The exact files required depend on the paths configured in the application and training script.
 
 ---
 
-## ⚙️ Installation
+## ⚙️ Installation and Setup
 
-### 1. Clone
+### Prerequisites
+
+- Python 3.10 or another compatible Python version.
+- Git.
+- Pip and virtual-environment support.
+- The required pretrained VGG-19 weights and trained decoder checkpoint.
+- An NVIDIA GPU with a compatible CUDA-enabled PyTorch build for GPU acceleration. CPU inference is also supported.
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/dileepkumar2626/AdaIN-Neural-Style-Transfer.git
+
 cd AdaIN-Neural-Style-Transfer
 ```
 
-### 2. Create a virtual environment
+### 2. Create and activate a virtual environment
+
+**Windows PowerShell**
+
+```powershell
+py -3.10 -m venv .venv
+
+.\.venv\Scripts\Activate.ps1
+```
+
+**Linux / macOS**
 
 ```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS / Linux
-source venv/bin/activate
+python3 -m venv .venv
+
+source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+If you have a different compatible Python version installed, replace `3.10` with that version.
+
+### 3. Install PyTorch
+
+PyTorch is installed separately because the correct build depends on your hardware.
+
+**NVIDIA GPU with CUDA 12.1 wheels**
 
 ```bash
-pip install -r requirements.txt
+python -m pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
 ```
 
-> For GPU acceleration, install the CUDA build of PyTorch from [pytorch.org](https://pytorch.org/get-started/locally/) first.
-
-### 4. Add the model weights
-
-Weight files are large, so they are excluded from git. Place them here:
-
-| File | Location |
-|------|----------|
-| Pretrained normalised VGG-19 (`vgg_normalised.pth`) | project root |
-| Trained decoder (`decoder_10.pth`) | `experiment/experiment1/` |
-
-The normalised VGG weights are widely available from the original AdaIN implementations (for example the [pytorch-AdaIN](https://github.com/naoto0804/pytorch-AdaIN) project). To produce your own decoder, see [Training](#-training).
-
-### 5. Configure environment variables
+**CPU-only installation**
 
 ```bash
-cp .env.example .env      # Windows: copy .env.example .env
+python -m pip install torch==2.2.2 torchvision==0.17.2
 ```
 
-Edit `.env`:
+For other hardware or software configurations, consult the official [PyTorch installation guide](https://pytorch.org/get-started/locally/).
 
-```env
-SECRET_KEY=change-me-to-a-long-random-string
-# PostgreSQL (postgres:// and postgresql:// URLs are converted automatically).
-# Leave empty to use a local SQLite database at instance/app.db
-DATABASE_URL=postgresql://user:password@localhost:5432/adain
-AUTO_CREATE_DB=1
-FLASK_DEBUG=0
-```
-
-Generate a strong secret key with:
+Verify the installation:
 
 ```bash
-python -c "import secrets; print(secrets.token_hex(32))"
+python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
 ```
 
-### 6. Run
+### 4. Install the remaining dependencies
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 5. Add the model checkpoints
+
+The application expects the pretrained VGG weights and a trained decoder at the paths configured in `app.py`.
+
+The current application references:
+
+```text
+vgg_normalised.pth
+experiment/
+└── experiment1/
+    └── decoder_100.pth
+```
+
+Place the required files at these locations, or update the corresponding paths in the code if your checkpoint filenames differ.
+
+Do not assume that cloning the repository also downloads these model weights.
+
+### 6. Configure environment variables
+
+The application can use SQLite for local development or PostgreSQL for a database-backed deployment.
+
+For a local PowerShell session, you can set a secret key and enable automatic database table creation:
+
+```powershell
+$env:SECRET_KEY = "replace-with-a-long-random-secret"
+$env:AUTO_CREATE_DB = "1"
+```
+
+To use PostgreSQL, configure `DATABASE_URL` with your database connection string:
+
+```powershell
+$env:DATABASE_URL = "postgresql://username:password@localhost:5432/adain"
+```
+
+For local SQLite development, leave `DATABASE_URL` unset. The application uses a database under its instance directory.
+
+For production, use a securely generated secret key, protect database credentials, and configure migrations appropriately. Avoid committing secrets to Git.
+
+### 7. Start the application
 
 ```bash
 python app.py
 ```
 
-Open **http://127.0.0.1:5000**, create an account and start styling.
+Open the local address in your browser:
+
+**http://127.0.0.1:5000**
+
+Register an account, upload a content image and a style reference, adjust the stylization strength, and generate your result.
 
 ---
 
-## 🗄️ Database
+## 🏋️ Training the Model
 
-| Setting | Behaviour |
-|---------|-----------|
-| `DATABASE_URL` empty | Uses SQLite at `instance/app.db` (great for development) |
-| `DATABASE_URL` set | Uses PostgreSQL (psycopg 3) with connection pooling and pre-ping |
-| `AUTO_CREATE_DB=1` | Creates tables on startup (development / first run) |
-| `AUTO_CREATE_DB=0` | Use migrations instead (recommended in production) |
+The project includes `train.py` for training the decoder used by the AdaIN pipeline.
 
-**Tables:** `users` and `style_transfers` (linked by a foreign key with `ON DELETE CASCADE`).
+Training is separate from using the web application. A compatible pretrained VGG checkpoint and suitable content and style datasets are required.
 
-**Using migrations** (recommended for production):
+### Training workflow
+
+1. Prepare content and style image directories.
+2. Download or configure the pretrained VGG weights.
+3. Configure the experiment name and training parameters.
+4. Run the training script.
+5. Evaluate the resulting decoder checkpoint.
+6. Configure the web application to load the checkpoint you want to use.
+
+Start by inspecting the supported training arguments:
 
 ```bash
-export FLASK_APP=app.py        # Windows PowerShell: $env:FLASK_APP="app.py"
-flask db init                  # once
-flask db migrate -m "initial schema"
-flask db upgrade
+python train.py --help
 ```
 
-Then set `AUTO_CREATE_DB=0`.
+A training experiment can involve parameters such as:
+
+| Parameter | Purpose |
+|---|---|
+| Content dataset | Images whose structures should be preserved |
+| Style dataset | Images providing artistic appearance |
+| Batch size | Number of image samples processed per batch |
+| Learning rate | Controls optimizer update size |
+| Epochs | Number of training passes through the dataset |
+| Content weight | Controls the content reconstruction objective |
+| Style weight | Controls the style reconstruction objective |
+| Checkpoint interval | Controls how often model weights are saved |
+
+The exact arguments and defaults are defined in `train.py`.
+
+**Hardware note:** Training can require substantial GPU memory and processing time depending on image resolution, dataset size, batch size, and number of epochs. Start with a smaller configuration to verify that your environment works before launching a long experiment.
 
 ---
 
-## 🏋️ Training
+## 🔐 Security and Data Handling
 
-Train the decoder on your own content and style datasets (for example MS-COCO for content and WikiArt for style):
+The web application includes several security-oriented features:
 
-```bash
-python train.py --help         # lists every option (dataset paths, epochs, batch size, crop, ...)
-```
+- Password hashing rather than storing plaintext passwords.
+- CSRF protection for supported forms.
+- Login-protected personal history.
+- Per-user access checks for stored transfer files.
+- Unique filenames for uploads.
+- Rate limiting on authentication-related routes.
+- Time-limited password-reset tokens.
+- Database-backed transfer records.
 
-- Random cropping is on by default; disable it with `--no-crop`.
-- Checkpoints are saved per epoch; point `app.py` at the checkpoint you want to serve (default: `experiment/experiment1/decoder_10.pth`).
+For production deployment, additionally configure HTTPS, secure environment variables, database backups, upload limits, persistent storage, and appropriate server-level protections.
 
----
-
-## 🌐 Deployment
-
-Run with a production server instead of the Flask dev server:
-
-```bash
-gunicorn -w 2 -b 0.0.0.0:8000 app:app
-```
-
-Checklist:
-
-- [ ] Set a strong `SECRET_KEY` and `FLASK_DEBUG=0`.
-- [ ] Use PostgreSQL and run `flask db upgrade`; set `AUTO_CREATE_DB=0`.
-- [ ] Serve behind HTTPS (Nginx, Caddy or your platform's proxy).
-- [ ] **Persist `instance/user_uploads/`.** Many hosts (Render, Heroku, etc.) wipe the disk on every deploy. Mount a persistent volume or move uploads to object storage such as S3. History entries whose files are missing are shown with a "no longer available" notice.
-- [ ] Make sure the model weight files are present on the server.
-- [ ] Model loading uses PyTorch, so allow enough RAM (≈ 1–2 GB) per worker.
+Never deploy with a development secret key or enable Flask debug mode in production.
 
 ---
 
-## 🔐 Security notes
+## 🧪 Experiments and Further Development
 
-- Passwords are hashed with Werkzeug (`generate_password_hash`).
-- All forms and AJAX calls are CSRF-protected.
-- Uploaded files are renamed with random UUIDs and stored per user, outside the public static folder, and served only to their owner.
-- Database errors are logged server-side and never shown to users.
+The repository provides a foundation for exploring neural style transfer beyond a single notebook experiment.
+
+Potential directions include:
+
+- Comparing different alpha values and input resolutions.
+- Evaluating how style-reference selection affects generated images.
+- Studying the trade-off between visual similarity and preservation of content structure.
+- Testing the effects of different decoder checkpoints.
+- Improving inference latency and GPU memory usage.
+- Extending the application with additional style presets and comparison tools.
+- Investigating stylization of faces, portraits, and highly textured images.
+
+These are potential research and development directions, not claims that every feature has already been implemented.
 
 ---
 
-## 🗺️ Roadmap
+## 📚 Research Reference
 
-- [ ] Cloud storage (S3 / Cloudinary) for uploads
-- [ ] Preset style gallery and style interpolation (mix several styles)
-- [ ] Video and webcam style transfer
-- [ ] Public sharing links for results
-- [ ] Docker image and one-click deployment
+Huang, X., & Belongie, S. (2017). *Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization*. Proceedings of the IEEE International Conference on Computer Vision (ICCV).
 
----
+- [Read the paper on arXiv](https://arxiv.org/abs/1703.06868)
+- [Original PyTorch AdaIN implementation](https://github.com/naoto0804/pytorch-AdaIN)
 
-## 📚 References
-
-- X. Huang and S. Belongie, *Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization*, ICCV 2017. [arXiv:1703.06868](https://arxiv.org/abs/1703.06868)
-- K. Simonyan and A. Zisserman, *Very Deep Convolutional Networks for Large-Scale Image Recognition*, ICLR 2015.
+The AdaIN method forms the core theoretical foundation of this project.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome!
+Contributions, bug reports, and suggestions are welcome.
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-idea`
-3. Commit your changes: `git commit -m "Add amazing idea"`
-4. Push the branch: `git push origin feature/amazing-idea`
-5. Open a Pull Request
+1. Fork the repository.
+2. Create a feature branch.
+3. Implement and test your changes.
+4. Commit your changes with a descriptive message.
+5. Push your branch and open a pull request.
+
+When contributing, please avoid committing large model weights, private user uploads, datasets without appropriate permissions, or environment secrets.
+
+---
+
+## 👨‍💻 Author
+
+**Dileep Kumar**
+
+Computer Science student interested in artificial intelligence, machine learning, computer vision, and deep learning engineering.
+
+- GitHub: [@dileepkumar2626](https://github.com/dileepkumar2626)
+- Project: [AdaIN-Neural-Style-Transfer](https://github.com/dileepkumar2626/AdaIN-Neural-Style-Transfer)
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License. Add a `LICENSE` file to the repository to make this official.
+Before using or redistributing this project, add and verify an explicit repository license. Also check the licensing terms of the pretrained model weights, training datasets, and example images independently.
 
 ---
 
-<div align="center">
-
-Built with ❤️ by [Dileep Kumar](https://github.com/dileepkumar2626)
-
-⭐ If you like this project, give it a star!
-
-</div>
+<p align="center">
+  <strong>Turning images into art with deep learning.</strong>
+  <br>
+  If you find this project interesting, consider starring the repository ⭐
+</p>
