@@ -706,6 +706,32 @@
                 </div>
             </div>
 
+            {% if style_library %}
+            <!-- Style Library -->
+            <div class="style-library mt-4" id="styleLibrary">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h5 class="lib-title m-0"><i class="fas fa-palette me-2"></i>Style Library
+                        <span class="lib-count">{{ style_library|length }} styles</span></h5>
+                    <div class="chips" role="group" aria-label="Filter styles by category">
+                        <button type="button" class="chip active" data-cat="all">All</button>
+                        {% for c in style_categories %}<button type="button" class="chip" data-cat="{{ c }}">{{ c }}</button>{% endfor %}
+                    </div>
+                </div>
+                <div class="style-grid" role="listbox" aria-label="Preset styles">
+                    {% for st in style_library %}
+                    <button type="button" class="style-tile" role="option" aria-selected="false"
+                            data-id="{{ st.id }}" data-cat="{{ st.category }}" data-name="{{ st.name }}"
+                            data-src="{{ url_for('static', filename=st.image) }}" title="{{ st.name }}{% if st.description %} - {{ st.description }}{% endif %}">
+                        <img loading="lazy" src="{{ url_for('static', filename=st.thumb) }}" alt="{{ st.name }}">
+                        <span class="tile-name">{{ st.name }}</span>
+                        <span class="tile-check"><i class="fas fa-check"></i></span>
+                    </button>
+                    {% endfor %}
+                </div>
+                <p class="small text-muted mt-3 mb-0 text-center">Pick a preset above, or upload your own style image in the box.</p>
+            </div>
+            {% endif %}
+
             <!-- Controls Section -->
             <div class="row justify-content-center mt-4">
                 <div class="col-md-8">
@@ -941,7 +967,31 @@
                 border-color: rgba(255, 255, 255, 0.75);
             }
         }
-    </style>
+    
+    /* ===== Style library ===== */
+    .style-library { background: rgba(30, 41, 59, .55); border: 1px solid rgba(255, 255, 255, .08); border-radius: 20px; padding: 22px; backdrop-filter: blur(8px); }
+    .lib-title { font-family: 'Orbitron', sans-serif; font-size: 1rem; letter-spacing: 1px; color: #c4b5fd; }
+    .lib-count { font-family: 'Inter', sans-serif; letter-spacing: 0; font-size: .75rem; color: #94a3b8; margin-left: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { border: 1px solid #334155; background: rgba(15, 23, 42, .7); color: #cbd5e1; border-radius: 999px; padding: 5px 16px; font-size: .82rem; transition: all .2s; }
+    .chip:hover { border-color: #818cf8; color: #fff; }
+    .chip.active { background: linear-gradient(135deg, #6366f1, #a855f7); border-color: transparent; color: #fff; }
+    .style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
+    .style-tile { position: relative; padding: 0; border: 2px solid transparent; border-radius: 14px; overflow: hidden; background: #0b1220; aspect-ratio: 1; cursor: pointer;
+        transition: transform .25s ease, box-shadow .25s ease, border-color .2s; animation: tileIn .5s cubic-bezier(.2, .8, .2, 1) both; }
+    .style-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+    .style-tile:hover { transform: translateY(-4px); box-shadow: 0 14px 28px -10px rgba(99, 102, 241, .6); }
+    .style-tile:hover img { transform: scale(1.08); }
+    .style-tile:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+    .style-tile .tile-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 7px; font-size: .74rem; font-weight: 600; color: #fff; text-align: center;
+        background: linear-gradient(transparent, rgba(2, 6, 23, .88)); }
+    .style-tile .tile-check { position: absolute; top: 7px; right: 7px; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: .7rem; transform: scale(0); transition: transform .25s cubic-bezier(.3, 1.6, .5, 1); }
+    .style-tile.selected { border-color: #c084fc; box-shadow: 0 0 0 3px rgba(192, 132, 252, .35); }
+    .style-tile.selected .tile-check { transform: scale(1); }
+    .style-tile.is-hidden { display: none; }
+    @keyframes tileIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+</style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1126,7 +1176,7 @@
     const form = $('#uploadForm');
     const zones = [
         { box: $('#contentPreview'), input: $('#content'), hidden: $('#content_path'), label: 'content', placeholder: 'Select Content Image' },
-        { box: $('#stylePreview'), input: $('#style'), hidden: $('#style_path'), label: 'style', placeholder: 'Select Style Image' },
+        { box: $('#stylePreview'), input: $('#style'), hidden: $('#style_path'), styleId: $('#style_id'), label: 'style', placeholder: 'Select Style Image' },
     ];
     const hintHTML = (txt) => '<div class="dz-hint"><i class="fas fa-cloud-arrow-up"></i><span>' + txt +
         '</span><small>Drag &amp; drop, or click &middot; PNG / JPG &middot; 10&nbsp;MB total</small></div>';
@@ -1163,6 +1213,7 @@
     }
     function clearZone(zone) {
         zone.input.value = ''; zone.hidden.value = '';
+        if (zone.styleId) clearPresetSelection();
         zone.box.classList.remove('has-image');
         zone.box.innerHTML = hintHTML(zone.placeholder);
         decorate(zone);
@@ -1172,6 +1223,7 @@
         if (!file || !validate(file, zone)) { if (file) zone.input.value = ''; return; }
         const dt = new DataTransfer(); dt.items.add(file);
         zone.input.files = dt.files;
+        if (zone.styleId) clearPresetSelection();      // an uploaded style replaces a preset
         zone.hidden.value = '';        
         showFile(zone, file);
     }
@@ -1191,6 +1243,31 @@
         zone.input.style.display = 'none';     
     });
     ['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => { if (!e.target.closest('.preview-image')) e.preventDefault(); }));
+    /* ---------- style library (presets) ---------- */
+    const tiles = $$('.style-tile');
+    function markSelected(id) {
+        tiles.forEach(t => { const on = !!id && t.dataset.id === id; t.classList.toggle('selected', on); t.setAttribute('aria-selected', on); });
+    }
+    function clearPresetSelection() { if (zones[1].styleId) zones[1].styleId.value = ''; markSelected(''); }
+    function selectPreset(tile) {
+        const z = zones[1];
+        z.input.value = ''; z.hidden.value = '';
+        z.styleId.value = tile.dataset.id;
+        z.box.innerHTML = '<img src="' + tile.dataset.src + '" alt="' + tile.dataset.name + '">';
+        decorate(z); z.box.classList.add('has-image');
+        setBadge(z, 'Preset: ' + tile.dataset.name);
+        markSelected(tile.dataset.id);
+    }
+    tiles.forEach((t, i) => {
+        t.style.animationDelay = (i * 35) + 'ms';
+        t.addEventListener('click', () => selectPreset(t));
+    });
+    $$('.chip').forEach(chip => chip.addEventListener('click', () => {
+        $$('.chip').forEach(c => c.classList.toggle('active', c === chip));
+        tiles.forEach(t => t.classList.toggle('is-hidden', chip.dataset.cat !== 'all' && t.dataset.cat !== chip.dataset.cat));
+    }));
+    if (zones[1].styleId && zones[1].styleId.value) markSelected(zones[1].styleId.value);
+
     const mount = $('#resultMount');
     function renderResult(d) {
         mount.innerHTML =
@@ -1210,7 +1287,7 @@
             '<a class="btn btn-outline-light" download href="' + d.result_url + '"><i class="fas fa-download me-1"></i>Download</a>' +
             '<button type="button" class="btn btn-outline-light" id="zoomBtn"><i class="fas fa-expand me-1"></i>Enlarge</button>' +
             '<a class="btn btn-outline-light" href="' + HISTORY_URL + '"><i class="fas fa-clock-rotate-left me-1"></i>History</a>' +
-            (d.alpha != null ? '<div class="small text-muted mt-2">Style strength: ' + d.alpha + '</div>' : '') +
+            (d.alpha != null || d.style_name ? '<div class="small text-muted mt-2">' + (d.style_name ? 'Style: ' + d.style_name + ' &middot; ' : '') + (d.alpha != null ? 'Strength: ' + d.alpha : '') + '</div>' : '') +
             '</div></div></div></div>';
 
         const cmp = $('#compare'), range = $('.cmp-range', cmp), after = $('.cmp-after', cmp);
@@ -1250,7 +1327,7 @@
     form.addEventListener('submit', e => {
         if (!window.XMLHttpRequest || !window.FormData) return;     // graceful fallback: normal post
         const hasC = zones[0].input.files.length || zones[0].hidden.value;
-        const hasS = zones[1].input.files.length || zones[1].hidden.value;
+        const hasS = zones[1].input.files.length || zones[1].hidden.value || zones[1].styleId.value;
         if (!hasC || !hasS) {
             e.preventDefault();
             toast('Please choose both a content image and a style image.', 'error');
@@ -1280,7 +1357,7 @@
             try { d = JSON.parse(xhr.responseText); } catch (_) { }
             if (xhr.status === 200 && d && d.ok) {
                 zones[0].hidden.value = d.content_filename; zones[1].hidden.value = d.style_filename;
-                zones.forEach(z => { z.input.value = ''; setBadge(z, 'Saved — reused for the next run'); });
+                zones.forEach(z => { z.input.value = ''; setBadge(z, (z === zones[1] && d.style_name) ? 'Preset: ' + d.style_name : 'Saved — reused for the next run'); });
                 renderResult(d);
                 toast('Style transfer complete!', 'success', 3000);
             } else {

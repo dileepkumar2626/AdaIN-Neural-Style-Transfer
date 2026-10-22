@@ -1,6 +1,14 @@
+import hashlib
+import json
 import logging
 import os
+import re
+import shutil
+import smtplib
+import ssl
+import threading
 import uuid
+from email.message import EmailMessage
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,6 +19,8 @@ from flask import (
     url_for, send_from_directory, flash, abort, jsonify
 )
 from flask_bootstrap import Bootstrap
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_login import (
     LoginManager, UserMixin, login_user,
     logout_user, login_required, current_user
@@ -19,17 +29,19 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from PIL import Image
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from torchvision import transforms
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 from wtforms import (
     FileField, SubmitField, FloatField, HiddenField,
     StringField, PasswordField
 )
-from wtforms.validators import DataRequired, Length
+from wtforms.validators import DataRequired, EqualTo, Length
 
 from utils.utils import adaptive_instance_normalizaiton
 from utils.models import VGGEncoder, Decoder
@@ -45,6 +57,25 @@ if not app.config["SECRET_KEY"]:
     raise RuntimeError("Set SECRET_KEY in your .env file.")
 
 csrf = CSRFProtect(app)
+
+# Behind Nginx / Caddy / Cloudflare Tunnel every request would otherwise look like
+# it comes from the proxy's IP, so rate limits would hit all users at once.
+# Set TRUSTED_PROXY=1 only when you really are behind exactly one proxy.
+if os.environ.get("TRUSTED_PROXY", "0") == "1":
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Password reset
+app.config["RESET_TOKEN_MAX_AGE"] = int(os.environ.get("RESET_TOKEN_MAX_AGE", "3600"))  # seconds
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "").rstrip("/")  # e.g. https://styleforge.example.com
+
+# Rate limiting (in-memory by default; use Redis when running several workers/servers:
+# RATELIMIT_STORAGE_URI=redis://localhost:6379)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+    default_limits=[],
+)
 
 
 def normalise_database_url(url):
@@ -179,6 +210,15 @@ def handle_db_error(exc):
     return render_template_string_safe(message), 500
 
 
+@app.errorhandler(429)
+def handle_rate_limit(exc):
+    message = "Too many attempts. Please wait a few minutes and try again."
+    if is_ajax():
+        return jsonify(ok=False, error=message), 429
+    flash(message, "danger")
+    return redirect(url_for("index" if current_user.is_authenticated else "login"))
+
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_too_large(exc):
     message = "Upload too large: the two images together must be under 10 MB."
@@ -204,14 +244,30 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Log in")
 
 
+class ForgotPasswordForm(FlaskForm):
+    email = StringField("Email", validators=[DataRequired(), Length(max=255)])
+    submit = SubmitField("Send reset link")
+
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField("New password", validators=[DataRequired(), Length(min=8, max=128)])
+    confirm = PasswordField(
+        "Confirm new password",
+        validators=[DataRequired(), EqualTo("password", message="Passwords do not match.")],
+    )
+    submit = SubmitField("Reset password")
+
+
 class UploadForm(FlaskForm):
     content = FileField("Content_Image")
     style = FileField("Style_Image")
     content_path = HiddenField()
     style_path = HiddenField()
+    style_id = HiddenField()   # id of a preset from the style library (static/styles)
     alpha = FloatField("Alpha", default=1.0)
     submit = SubmitField("Transfer Style")
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per hour", methods=["POST"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
@@ -260,6 +316,7 @@ def register():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute; 50 per hour", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
@@ -279,6 +336,242 @@ def login():
         flash("Invalid email or password.", "danger")
 
     return render_template("login.html", form=form)
+
+
+# --------------------------------------------------
+# Password reset (forgot password)
+# --------------------------------------------------
+def _reset_serializer():
+    return URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="password-reset-v1")
+
+
+def _password_fingerprint(user):
+    # Part of the token: once the password changes the fingerprint changes, so
+    # a reset link can be used exactly once and old links die automatically.
+    return hashlib.sha256(user.password_hash.encode("utf-8")).hexdigest()[:20]
+
+
+def make_reset_token(user):
+    return _reset_serializer().dumps({"uid": user.id, "fp": _password_fingerprint(user)})
+
+
+def read_reset_token(token):
+    """Return (user, None) on success or (None, 'expired' | 'invalid')."""
+    try:
+        data = _reset_serializer().loads(token, max_age=app.config["RESET_TOKEN_MAX_AGE"])
+    except SignatureExpired:
+        return None, "expired"
+    except BadSignature:
+        return None, "invalid"
+    user = db.session.get(User, data.get("uid")) if isinstance(data, dict) else None
+    if user is None or data.get("fp") != _password_fingerprint(user):
+        return None, "invalid"
+    return user, None
+
+
+def external_url(endpoint, **values):
+    """Absolute URL for e-mails. APP_BASE_URL avoids trusting the Host header."""
+    if APP_BASE_URL:
+        return APP_BASE_URL + url_for(endpoint, **values)
+    return url_for(endpoint, _external=True, **values)
+
+
+def _send_smtp(message):
+    server = os.environ["MAIL_SERVER"]
+    port = int(os.environ.get("MAIL_PORT", "587"))
+    username = os.environ.get("MAIL_USERNAME")
+    password = os.environ.get("MAIL_PASSWORD")
+    if os.environ.get("MAIL_USE_SSL", "0") == "1":
+        smtp = smtplib.SMTP_SSL(server, port, timeout=20, context=ssl.create_default_context())
+    else:
+        smtp = smtplib.SMTP(server, port, timeout=20)
+    with smtp:
+        if os.environ.get("MAIL_USE_SSL", "0") != "1" and os.environ.get("MAIL_USE_TLS", "1") == "1":
+            smtp.starttls(context=ssl.create_default_context())
+        if username:
+            smtp.login(username, password or "")
+        smtp.send_message(message)
+
+
+def send_email(to_address, subject, text_body, html_body=None):
+    """Send in a background thread so the response time never reveals whether
+    an account exists. Without MAIL_SERVER the message is printed to the log
+    (development mode)."""
+    if not os.environ.get("MAIL_SERVER"):
+        logger.warning("MAIL_SERVER not set - e-mail NOT sent. To: %s | %s\n%s",
+                       to_address, subject, text_body)
+        return
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = os.environ.get("MAIL_FROM") or os.environ.get("MAIL_USERNAME") or "no-reply@localhost"
+    message["To"] = to_address
+    message.set_content(text_body)
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
+
+    def worker():
+        try:
+            _send_smtp(message)
+        except Exception:
+            logger.exception("Could not send e-mail to %s", to_address)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def send_reset_email(user):
+    link = external_url("reset_password", token=make_reset_token(user))
+    minutes = app.config["RESET_TOKEN_MAX_AGE"] // 60
+    text = (
+        f"Hi {user.username},\n\n"
+        f"We received a request to reset your StyleForge AI password.\n"
+        f"Open this link to choose a new one (valid for {minutes} minutes):\n\n{link}\n\n"
+        f"If you didn't ask for this, you can ignore this e-mail; your password stays the same."
+    )
+    html = (
+        f"<p>Hi {user.username},</p>"
+        f"<p>We received a request to reset your StyleForge AI password.</p>"
+        f'<p><a href="{link}" style="background:#6366f1;color:#fff;padding:12px 22px;'
+        f'border-radius:10px;text-decoration:none;display:inline-block">Choose a new password</a></p>'
+        f"<p>The link is valid for {minutes} minutes and works once.</p>"
+        f"<p style='color:#666'>If you didn't ask for this, ignore this e-mail; your password stays the same.</p>"
+    )
+    send_email(user.email, "Reset your StyleForge AI password", text, html)
+
+
+def send_password_changed_email(user):
+    send_email(
+        user.email,
+        "Your StyleForge AI password was changed",
+        f"Hi {user.username},\n\nYour password was just changed. If this wasn't you, "
+        f"reset it again right away and contact support.",
+    )
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per hour; 15 per day", methods=["POST"])
+def forgot_password():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        email = form.email.data.strip().lower()
+        user = db.session.execute(
+            db.select(User).where(db.func.lower(User.email) == email)
+        ).scalars().first()
+        if user is not None:
+            try:
+                send_reset_email(user)
+            except Exception:
+                logger.exception("Could not build reset e-mail")
+        # Same answer whether or not the account exists (no account enumeration).
+        flash("If an account exists for that e-mail, we've sent a link to reset the password.", "success")
+        return redirect(url_for("login"))
+    return render_template("forgot_password.html", form=form)
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+@limiter.limit("10 per hour", methods=["POST"])
+def reset_password(token):
+    user, problem = read_reset_token(token)
+    if user is None:
+        flash(
+            "That reset link has expired. Request a new one." if problem == "expired"
+            else "That reset link is invalid or was already used. Request a new one.",
+            "danger",
+        )
+        return redirect(url_for("forgot_password"))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception("Password reset failed")
+            flash("Could not update the password right now. Please try again.", "danger")
+            return render_template("reset_password.html", form=form)
+        send_password_changed_email(user)
+        flash("Password updated. You can log in now.", "success")
+        return redirect(url_for("login"))
+    return render_template("reset_password.html", form=form)
+
+
+# --------------------------------------------------
+# Style library (preset styles users can pick)
+# --------------------------------------------------
+STYLES_DIR = BASE_DIR / "static" / "styles"
+STYLE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,60}$")
+STYLE_EXTENSIONS = (".jpg", ".jpeg", ".png")
+
+
+def load_style_library():
+    """Read static/styles/styles.json; any image in that folder that is not listed
+    is added automatically so people can just drop a file in."""
+    items, seen = [], set()
+    manifest = STYLES_DIR / "styles.json"
+    if manifest.is_file():
+        try:
+            entries = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            logger.exception("Could not read %s", manifest)
+            entries = []
+        for e in entries:
+            sid, fname = str(e.get("id", "")), str(e.get("file", ""))
+            if not STYLE_ID_RE.match(sid) or sid in seen or Path(fname).name != fname:
+                continue
+            if not (STYLES_DIR / fname).is_file():
+                logger.warning("Style %s listed but %s is missing", sid, fname)
+                continue
+            seen.add(sid)
+            items.append({
+                "id": sid, "file": fname,
+                "name": str(e.get("name") or sid.replace("-", " ").title()),
+                "category": str(e.get("category") or "More"),
+                "description": str(e.get("description") or ""),
+            })
+    listed_files = {i["file"] for i in items}
+    if STYLES_DIR.is_dir():
+        for path in sorted(STYLES_DIR.iterdir()):
+            sid = re.sub(r"[^a-z0-9_-]+", "-", path.stem.lower()).strip("-")
+            if (path.suffix.lower() in STYLE_EXTENSIONS and path.name not in listed_files
+                    and STYLE_ID_RE.match(sid) and sid not in seen):
+                seen.add(sid)
+                items.append({"id": sid, "file": path.name, "name": path.stem.replace("-", " ").replace("_", " ").title(),
+                              "category": "More", "description": ""})
+    for i in items:
+        thumb = STYLES_DIR / "thumbs" / i["file"]
+        i["thumb"] = f"styles/thumbs/{i['file']}" if thumb.is_file() else f"styles/{i['file']}"
+        i["image"] = f"styles/{i['file']}"
+    return items
+
+
+STYLE_LIBRARY = load_style_library()
+STYLE_BY_ID = {s["id"]: s for s in STYLE_LIBRARY}
+STYLE_CATEGORIES = list(dict.fromkeys(s["category"] for s in STYLE_LIBRARY))
+PRESET_NAME_RE = re.compile(r"^preset_([a-z0-9][a-z0-9_-]*)\.(?:jpg|jpeg|png)$")
+
+
+def copy_preset_to_user(style):
+    """Copy a preset into the user's own folder (once) so history, reuse and delete
+    work exactly like they do for uploaded styles, with no database change."""
+    suffix = Path(style["file"]).suffix.lower()
+    name = f"preset_{style['id']}{suffix}"
+    destination = user_upload_dir() / name
+    if not destination.is_file():
+        shutil.copyfile(STYLES_DIR / style["file"], destination)
+    return name
+
+
+def preset_label(filename):
+    match = PRESET_NAME_RE.match(filename or "")
+    style = STYLE_BY_ID.get(match.group(1)) if match else None
+    return style["name"] if style else None
+
+
+@app.context_processor
+def inject_style_library():
+    return {"style_library": STYLE_LIBRARY, "style_categories": STYLE_CATEGORIES}
+
 
 
 @app.route("/logout", methods=["POST"])
@@ -362,6 +655,7 @@ def index():
     error = None
     history_id = None
     alpha = None
+    preset = None
 
     if request.method == "POST" and not form.validate_on_submit():
         error = "Your session expired or the form was invalid. Reload the page and try again."
@@ -376,9 +670,15 @@ def index():
             else:
                 content_filename = form.content_path.data
 
+            preset = None
             if form.style.data and form.style.data.filename:
-                style_filename = save_uploaded_file(form.style.data)
-            else:
+                style_filename = save_uploaded_file(form.style.data)       # 1) uploaded file wins
+            elif (form.style_id.data or "").strip():                         # 2) preset from the library
+                preset = STYLE_BY_ID.get(form.style_id.data.strip())
+                if preset is None:
+                    raise ValueError("That style is not available. Pick another one.")
+                style_filename = copy_preset_to_user(preset)
+            else:                                                            # 3) re-use earlier style
                 style_filename = form.style_path.data
 
             content_path = existing_user_image(content_filename)
@@ -436,6 +736,10 @@ def index():
         form.content_path.data = content_filename
     if style_filename:
         form.style_path.data = style_filename
+    if preset is not None:
+        form.style_id.data = preset["id"]
+    elif style_filename:
+        form.style_id.data = ""
 
     if is_ajax() and request.method == "POST":
         def img_url(name):
@@ -451,6 +755,8 @@ def index():
             result_filename=result_image,
             content_url=img_url(content_filename),
             style_url=img_url(style_filename),
+            style_id=preset["id"] if preset else None,
+            style_name=preset["name"] if preset else None,
             result_url=img_url(result_image),
         ), (200 if result_image else 400)
 
@@ -458,6 +764,7 @@ def index():
         "result_url": url_for("send_image", filename=result_image) if result_image else None,
         "content_url": url_for("send_image", filename=content_filename) if result_image and content_filename else None,
         "alpha": alpha if result_image else None,
+        "style_name": preset["name"] if preset else None,
         "error": error,
     }
 
@@ -491,6 +798,7 @@ def history():
     )
     transfers = pagination.items
     for t in transfers:
+        t.style_label = preset_label(t.style_filename)
         t.files_ok = all(
             existing_user_image(name) is not None
             for name in (t.content_filename, t.style_filename, t.output_filename)

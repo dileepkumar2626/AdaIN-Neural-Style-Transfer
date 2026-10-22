@@ -1,0 +1,114 @@
+[
+  {
+    "id": "swirl-night",
+    "name": "Swirling Night",
+    "category": "Painting",
+    "description": "Flowing brushwork in deep blues and gold",
+    "file": "swirl-night.jpg"
+  },
+  {
+    "id": "impasto",
+    "name": "Thick Oil",
+    "category": "Painting",
+    "description": "Heavy, textured oil strokes in rich colour",
+    "file": "impasto.jpg"
+  },
+  {
+    "id": "watercolor",
+    "name": "Watercolor Wash",
+    "category": "Painting",
+    "description": "Soft, bleeding washes on paper",
+    "file": "watercolor.jpg"
+  },
+  {
+    "id": "pointillism",
+    "name": "Pointillism",
+    "category": "Painting",
+    "description": "Thousands of tiny dots of colour",
+    "file": "pointillism.jpg"
+  },
+  {
+    "id": "sunset-strokes",
+    "name": "Sunset Strokes",
+    "category": "Painting",
+    "description": "Warm gradient painted with broad strokes",
+    "file": "sunset-strokes.jpg"
+  },
+  {
+    "id": "cubist-shards",
+    "name": "Cubist Shards",
+    "category": "Abstract",
+    "description": "Overlapping angular planes in earth tones",
+    "file": "cubist-shards.jpg"
+  },
+  {
+    "id": "bauhaus",
+    "name": "Bauhaus",
+    "category": "Abstract",
+    "description": "Primary-colour geometry on cream paper",
+    "file": "bauhaus.jpg"
+  },
+  {
+    "id": "pastel-dream",
+    "name": "Pastel Dream",
+    "category": "Abstract",
+    "description": "Soft, hazy pastel clouds",
+    "file": "pastel-dream.jpg"
+  },
+  {
+    "id": "psychedelic",
+    "name": "Psychedelic",
+    "category": "Abstract",
+    "description": "Vivid rainbow spirals",
+    "file": "psychedelic.jpg"
+  },
+  {
+    "id": "neon-grid",
+    "name": "Neon Grid",
+    "category": "Digital",
+    "description": "Glowing synthwave lines on midnight",
+    "file": "neon-grid.jpg"
+  },
+  {
+    "id": "art-deco",
+    "name": "Art Deco Gold",
+    "category": "Digital",
+    "description": "Gold fans and rays on black",
+    "file": "art-deco.jpg"
+  },
+  {
+    "id": "pop-halftone",
+    "name": "Pop Art",
+    "category": "Pattern",
+    "description": "Comic-book halftone dots",
+    "file": "pop-halftone.jpg"
+  },
+  {
+    "id": "stained-glass",
+    "name": "Stained Glass",
+    "category": "Pattern",
+    "description": "Jewel colours divided by dark lead lines",
+    "file": "stained-glass.jpg"
+  },
+  {
+    "id": "mosaic",
+    "name": "Mosaic Tiles",
+    "category": "Pattern",
+    "description": "Hand-laid ceramic tiles",
+    "file": "mosaic.jpg"
+  },
+  {
+    "id": "waves",
+    "name": "Indigo Waves",
+    "category": "Pattern",
+    "description": "Traditional overlapping wave scales",
+    "file": "waves.jpg"
+  },
+  {
+    "id": "ink-sketch",
+    "name": "Ink Sketch",
+    "category": "Sketch",
+    "description": "Cross-hatched pen on cream paper",
+    "file": "ink-sketch.jpg"
+  }
+]
