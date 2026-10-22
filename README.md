@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="examples/brad%20pitt.jpg" width="30%" alt="Original content photograph">
-  <img src="examples/picasso%20seated%20nude%20hr.jpg" width="30%" alt="Artistic style reference">
+  <img src="examples/sketch.jpg" width="30%" alt="Artistic style reference">
   <img src="examples/stylized_brad_pitt.jpg" width="30%" alt="Neural style transfer result">
 </p>
 
