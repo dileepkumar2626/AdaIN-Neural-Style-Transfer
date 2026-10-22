@@ -815,77 +815,192 @@
 
     <section class="container faq-section fade-in-up" id="faq">
         <div class="card">
-            <div class="card-header text-center py-3">FAQs</div>
+            <div class="card-header text-center py-3">Frequently Asked Questions</div>
             <div class="card-body">
                 <div class="accordion" id="faqAccordion">
+                    <div class="faq-group">Getting started</div>
                     <div class="accordion-item">
-                        <h2 class="accordion-header" id="faqHeadingOne">
+                        <h2 class="accordion-header" id="faqHeading1">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#faqOne" aria-expanded="false" aria-controls="faqOne">
-                                1. Is it a pretrained model?
+                                data-bs-target="#faq1" aria-expanded="false" aria-controls="faq1">
+                                1. How do I turn my photo into art?
                             </button>
                         </h2>
-                        <div id="faqOne" class="accordion-collapse collapse" aria-labelledby="faqHeadingOne"
+                        <div id="faq1" class="accordion-collapse collapse" aria-labelledby="faqHeading1"
                             data-bs-parent="#faqAccordion">
                             <div class="accordion-body">
-                                No, we train a model ourselves.
+                                Upload your photo as the <strong>content</strong> image, choose a style from the Style Library (or upload your own), set the style strength and press <strong>Transfer Style</strong>. The result appears below with a before/after slider, and you can download it.
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
-                        <h2 class="accordion-header" id="faqHeadingTwo">
+                        <h2 class="accordion-header" id="faqHeading2">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#faqTwo" aria-expanded="false" aria-controls="faqTwo">
-                                2. Is it a free platform?
+                                data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
+                                2. Which styles can I use?
                             </button>
                         </h2>
-                        <div id="faqTwo" class="accordion-collapse collapse" aria-labelledby="faqHeadingTwo"
+                        <div id="faq2" class="accordion-collapse collapse" aria-labelledby="faqHeading2"
                             data-bs-parent="#faqAccordion">
                             <div class="accordion-body">
-                                This demo is currently available as a free experience.
+                                Pick one of the built-in styles (Painting, Abstract, Digital, Pattern and Sketch) or upload any PNG or JPG, such as a painting, a texture or a photo of artwork. The model doesn't need training for each new style, so any image works as a reference.
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
-                        <h2 class="accordion-header" id="faqHeadingThree">
+                        <h2 class="accordion-header" id="faqHeading3">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#faqThree" aria-expanded="false" aria-controls="faqThree">
-                                3. Which styles of painting can be used?
+                                data-bs-target="#faq3" aria-expanded="false" aria-controls="faq3">
+                                3. What does Style Strength do?
                             </button>
                         </h2>
-                        <div id="faqThree" class="accordion-collapse collapse" aria-labelledby="faqHeadingThree"
+                        <div id="faq3" class="accordion-collapse collapse" aria-labelledby="faqHeading3"
                             data-bs-parent="#faqAccordion">
                             <div class="accordion-body">
-                                You can use almost any painting style image (impressionist, abstract, cubist,
-                                watercolor, sketch, and more) as the style reference.
+                                It blends your original photo with the fully stylized version. At <strong>1.0</strong> you get the full style, and lower values keep more of the original. A good starting point is 0.5&ndash;0.7 for portraits and 0.8&ndash;1.0 for landscapes and objects.
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
-                        <h2 class="accordion-header" id="faqHeadingFour">
+                        <h2 class="accordion-header" id="faqHeading4">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#faqFour" aria-expanded="false" aria-controls="faqFour">
-                                4. Tech stack of the project?
+                                data-bs-target="#faq4" aria-expanded="false" aria-controls="faq4">
+                                4. Can I try another style or strength without uploading again?
                             </button>
                         </h2>
-                        <div id="faqFour" class="accordion-collapse collapse" aria-labelledby="faqHeadingFour"
+                        <div id="faq4" class="accordion-collapse collapse" aria-labelledby="faqHeading4"
                             data-bs-parent="#faqAccordion">
                             <div class="accordion-body">
-                                Python, PyTorch, Flask.
+                                Yes. After a run your images are remembered, so you can move the slider or click a different preset and press Transfer Style again. You only upload again if you want to change the photo.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="faq-group">Results</div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading5">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq5" aria-expanded="false" aria-controls="faq5">
+                                5. Why is my result smaller than my original photo?
+                            </button>
+                        </h2>
+                        <div id="faq5" class="accordion-collapse collapse" aria-labelledby="faqHeading5"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                To keep results fast, both images are resized so the shorter side is 512 px. The aspect ratio is kept, so nothing is stretched, but the download is not full camera resolution.
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
-                        <h2 class="accordion-header" id="faqHeadingFive">
+                        <h2 class="accordion-header" id="faqHeading6">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#faqFive" aria-expanded="false" aria-controls="faqFive">
-                                5. Which dataset / how big data?
+                                data-bs-target="#faq6" aria-expanded="false" aria-controls="faq6">
+                                6. Why do faces sometimes look blurry or distorted?
                             </button>
                         </h2>
-                        <div id="faqFive" class="accordion-collapse collapse" aria-labelledby="faqHeadingFive"
+                        <div id="faq6" class="accordion-collapse collapse" aria-labelledby="faqHeading6"
                             data-bs-parent="#faqAccordion">
                             <div class="accordion-body">
-                                The model is trained on large-scale image datasets.
+                                The model matches the overall colour and texture of the style across the whole picture, and it doesn't know where eyes, nose or mouth are. Strong, busy styles can swallow facial detail. For portraits, try a lower strength, softer styles such as Watercolor Wash or Pastel Dream, and a sharp, front-facing, well-lit photo. Face-aware stylization is planned.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading7">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq7" aria-expanded="false" aria-controls="faq7">
+                                7. Which files can I upload, and is there a size limit?
+                            </button>
+                        </h2>
+                        <div id="faq7" class="accordion-collapse collapse" aria-labelledby="faqHeading7"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                PNG and JPG/JPEG files. The two images together must be under 10 MB. Larger photos are fine within that limit because they are resized before processing.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="faq-group">Your account and privacy</div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading8">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq8" aria-expanded="false" aria-controls="faq8">
+                                8. Where can I find my earlier results?
+                            </button>
+                        </h2>
+                        <div id="faq8" class="accordion-collapse collapse" aria-labelledby="faqHeading8"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                On the <a href="{{ url_for('history') }}">My History</a> page. You can search, filter by strength, sort, open any result full-screen with its content and style images, download it, or delete it.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading9">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq9" aria-expanded="false" aria-controls="faq9">
+                                9. Who can see my images, and are they used to train the model?
+                            </button>
+                        </h2>
+                        <div id="faq9" class="accordion-collapse collapse" aria-labelledby="faqHeading9"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Your uploads and results are stored in a private folder for your account and can only be opened while you are logged in. The app doesn't use them to train or change the model. Deleting a transfer from History removes the record and its image files.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading10">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq10" aria-expanded="false" aria-controls="faq10">
+                                10. I forgot my password. What do I do?
+                            </button>
+                        </h2>
+                        <div id="faq10" class="accordion-collapse collapse" aria-labelledby="faqHeading10"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Use <strong>Forgot password?</strong> on the log-in page and enter your e-mail. If an account exists you will get a one-time link that works for 1 hour. If nothing arrives, check your spam folder and make sure you used the e-mail you registered with.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading11">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq11" aria-expanded="false" aria-controls="faq11">
+                                11. Is it free?
+                            </button>
+                        </h2>
+                        <div id="faq11" class="accordion-collapse collapse" aria-labelledby="faqHeading11"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                This demo is currently free to use.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="faq-group">How it works</div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading12">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq12" aria-expanded="false" aria-controls="faq12">
+                                12. What model is behind this, and why is it so quick?
+                            </button>
+                        </h2>
+                        <div id="faq12" class="accordion-collapse collapse" aria-labelledby="faqHeading12"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                It uses Adaptive Instance Normalization (AdaIN). A frozen, pretrained VGG-19 network reads the features of both images, AdaIN matches the photo's feature statistics to the style's, and a decoder that we trained paints the result. Everything happens in one forward pass, so there is no per-style training or waiting.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqHeading13">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#faq13" aria-expanded="false" aria-controls="faq13">
+                                13. What is the project built with?
+                            </button>
+                        </h2>
+                        <div id="faq13" class="accordion-collapse collapse" aria-labelledby="faqHeading13"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Python, PyTorch and Flask, with SQLAlchemy on PostgreSQL (or SQLite for development), plus Bootstrap and plain JavaScript for the interface.
                             </div>
                         </div>
                     </div>
@@ -991,6 +1106,10 @@
     .style-tile.selected .tile-check { transform: scale(1); }
     .style-tile.is-hidden { display: none; }
     @keyframes tileIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+
+    .faq-group { margin: 22px 0 10px; font-family: 'Orbitron', sans-serif; font-size: .8rem; letter-spacing: 1.5px; text-transform: uppercase; color: #a78bfa; }
+    .faq-group:first-child { margin-top: 0; }
+    .faq-section .accordion-body a { color: #a5b4fc; }
 </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
