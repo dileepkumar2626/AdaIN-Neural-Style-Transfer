@@ -1,0 +1,6 @@
+# Streamlit Community Cloud is CPU-hosted by default; use CPU wheels to keep deployment smaller.
+--extra-index-url https://download.pytorch.org/whl/cpu
+streamlit>=1.40,<2.0
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+Pillow>=10.0,<13.0
