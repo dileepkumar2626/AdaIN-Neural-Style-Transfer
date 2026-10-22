@@ -18,7 +18,7 @@ from utils.models import Decoder, VGGEncoder
 from utils.utils import adaptive_instance_normalizaiton
 
 VGG_PATH = ROOT / "vgg_normalised.pth"
-DECODER_PATH = ROOT / "experiment" / "experiment1" / "decoder_100.pth"
+DECODER_PATH = ROOT / "experiment" / "experiment1" / "decoder_128.pth"
 ALLOWED_TYPES = ["png", "jpg", "jpeg"]
 
 st.set_page_config(page_title="StyleForge AI | Neural Style Transfer", page_icon="🎨", layout="wide")
