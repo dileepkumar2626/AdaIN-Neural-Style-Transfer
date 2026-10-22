@@ -45,7 +45,13 @@ runs/
 logs/
 wandb/
 tensorboard/
-*.pth
+# *.pth
+decoder_124.pth
+decoder_126.pth
+decoder_170.pth
+optimizer_124.pth
+optimizer_126.pth
+optimizer_170.pth
 *.pt
 *.ckpt
 *.onnx
