@@ -82,32 +82,53 @@ Forms are protected by Flask-WTF CSRF protection. Authentication and password-re
 
 ## How the model works
 
-The implementation follows the core AdaIN approach introduced by Huang and Belongie:
+The app uses **Adaptive Instance Normalization (AdaIN)** to transfer the visual style of one image onto another. It uses a frozen VGG-19 encoder to extract features, applies AdaIN to transfer the style-image statistics, and then uses the trained decoder to turn those features back into an image.
 
-1. **Encode:** a frozen, pretrained VGG feature encoder extracts feature maps from the content and style images.
-2. **Normalize adaptively:** AdaIN adjusts the content features using the channel-wise mean and standard deviation of the style features.
-3. **Control style strength:** the application blends the AdaIN features with the original content features using a strength value, `alpha`.
-4. **Decode:** a trained convolutional decoder maps the blended features back into image space.
+### Processing pipeline
 
-Conceptually, the AdaIN feature transformation is
+The diagram below uses GitHub-supported Mermaid syntax. The explanation and formulas underneath it remain readable even in Markdown viewers that do not render Mermaid.
 
-$$
-\operatorname{AdaIN}(c,s) = \sigma(s)\left(\frac{c-\mu(c)}{\sigma(c)}\right)+\mu(s),
-$$
+```mermaid
+flowchart TD
+    C["Content image"] --> CE["VGG-19 encoder: content features"]
+    S["Style reference image"] --> SE["VGG-19 encoder: style features"]
+    CE --> A["AdaIN: transfer style statistics"]
+    SE --> A
+    CE --> B["Blend features using alpha"]
+    A --> B
+    B --> D["Trained decoder"]
+    D --> O["Stylized output image"]
+```
 
-where \(c\) and \(s\) are content and style features, and \(\mu\) and \(\sigma\) are their channel-wise mean and standard deviation.
+### Step by step
 
-The strength control blends features as
+1. **Encode both images.** The pretrained VGG-19 encoder extracts feature maps from the content photograph and the style reference. The encoder is frozen; inference does not update its weights.
+2. **Transfer the style statistics.** AdaIN normalizes the content features using the content image's channel-wise mean and standard deviation, then scales them using the style features' statistics.
+3. **Set the style strength.** The `alpha` value blends the style-transformed features with the original content features.
+4. **Decode the result.** The trained decoder converts the blended feature maps into the final stylized image.
 
-$$
-f_{\alpha}=\alpha\,\operatorname{AdaIN}(c,s)+(1-\alpha)c.
-$$
+The core computation can be expressed without special equation formatting:
 
-- `alpha = 0.0`: favour the original content features.
-- `alpha = 1.0`: use the full AdaIN style transformation.
-- Values between 0 and 1 trade off content appearance and transferred style.
+```python
+content_normalized = (content_features - content_mean) / content_std
+adain_features = content_normalized * style_std + style_mean
+blended_features = alpha * adain_features + (1 - alpha) * content_features
+stylized_image = decoder(blended_features)
+```
 
-A new style image does **not** require retraining. The style image is encoded at inference time and its feature statistics guide the decoder.
+The means and standard deviations are calculated per feature channel. A small epsilon is added when calculating standard deviations to avoid division by zero.
+
+### What the style-strength control means
+
+| `alpha` value | Effect |
+|---|---|
+| `0.0` | Uses the original content features, so the output should remain close to the content image. |
+| `0.5` | Blends the original content features with the AdaIN-transformed features. |
+| `1.0` | Uses the full AdaIN style transformation. |
+
+Values between `0.0` and `1.0` provide a continuous trade-off between the original content appearance and the transferred style. The Flask app validates that `alpha` stays within this range.
+
+**You do not need to retrain the model for a new style image.** At inference time, the encoder extracts the new style image's feature statistics and the existing decoder generates the result. Training is only needed when you want to train or replace the decoder weights.
 
 ### Included model files
 
