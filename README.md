@@ -27,7 +27,7 @@ The pretrained VGG weights and decoder checkpoint are included in the repository
 
 ## Example results
 
-The repository includes sample content images, style references, and stylized outputs. These examples are local files, so they also render when the repository is viewed offline in an editor that supports Markdown previews.
+The repository includes sample content images, style references, and stylized outputs.
 
 | Content image | Style reference | Example output |
 |---|---|---|
@@ -79,14 +79,21 @@ The Flask app is a server-rendered web application with an AJAX-enhanced transfe
 | `/examples/<path:filename>` | Public | Serve the bundled demonstration images. |
 
 Forms are protected by Flask-WTF CSRF protection. Authentication and password-reset POST endpoints have rate limits; see `app.py` for the exact values.
+## 🚀 Try It Live
+
+Want to try the AI without installing anything?
+
+**[🎨 Open AdaIN Neural Style Transfer — Live Demo](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
+
+Upload a content image and a style image, then experiment with AI-powered neural style transfer directly in your browser. No local installation required.
+
+
 
 ## How the model works
 
 The app uses **Adaptive Instance Normalization (AdaIN)** to transfer the visual style of one image onto another. It uses a frozen VGG-19 encoder to extract features, applies AdaIN to transfer the style-image statistics, and then uses the trained decoder to turn those features back into an image.
 
 ### Processing pipeline
-
-The diagram below uses GitHub-supported Mermaid syntax. The explanation and formulas underneath it remain readable even in Markdown viewers that do not render Mermaid.
 
 ```mermaid
 flowchart TD
