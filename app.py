@@ -48,6 +48,7 @@ from utils.models import VGGEncoder, Decoder
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
+# Keep inference memory bounded for small hosted instances such as Render Free.
 MAX_INFERENCE_SIDE = 256
 load_dotenv()
 
@@ -118,24 +119,11 @@ Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 UPLOAD_ROOT = Path(app.instance_path) / "user_uploads"
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
+# SQLAlchemy's URI was configured above, including the SQLite fallback.
+# Do not overwrite it here: DATABASE_URL may be unset in local development.
 db = SQLAlchemy()
-import os
-
-database_url = os.environ.get("DATABASE_URL")
-
-if database_url:
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace(
-            "postgres://", "postgresql+psycopg://", 1
-        )
-    elif database_url.startswith("postgresql://"):
-        database_url = database_url.replace(
-            "postgresql://", "postgresql+psycopg://", 1
-        )
-
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 db.init_app(app)
-migrate = Migrate(app, db)  
+migrate = Migrate(app, db)
 Bootstrap(app)
 
 login_manager = LoginManager()
@@ -639,6 +627,8 @@ def existing_user_image(filename):
         return None
     path = user_upload_dir() / filename
     return path if path.is_file() else None
+
+
 def load_image_for_inference(path, max_side=MAX_INFERENCE_SIDE):
     """Load a stored image at a bounded resolution before retaining it in RAM.
 
@@ -649,14 +639,15 @@ def load_image_for_inference(path, max_side=MAX_INFERENCE_SIDE):
         image.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
         return image.convert("RGB")
 
+
 def style_transfer(content_image, style_image, encoder, decoder, alpha, device):
-    # content_transform = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
-    # style_transform = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
+    # Images are already capped at MAX_INFERENCE_SIDE by load_image_for_inference.
+    # Do not Resize(512) here: that would upscale them and recreate the memory spike.
     to_tensor = transforms.ToTensor()
     content_tensor = to_tensor(content_image).unsqueeze(0).to(device)
     style_tensor = to_tensor(style_image).unsqueeze(0).to(device)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         content_feat = encoder(content_tensor, is_test=True)
         style_feat = encoder(style_tensor, is_test=True)
         stylized_feat = adaptive_instance_normalizaiton(content_feat, style_feat)
@@ -717,10 +708,11 @@ def index():
             if not 0.0 <= alpha <= 1.0:
                 raise ValueError("Style strength must be between 0 and 1.")
 
-            with Image.open(content_path) as image:
-                content_image = image.convert("RGB")
-            with Image.open(style_path) as image:
-                style_image = image.convert("RGB")
+            # Resize each source as it is opened. Some preset images are over
+            # 6000 px wide, so converting both originals to RGB first can consume
+            # a large amount of RAM on small Render instances.
+            content_image = load_image_for_inference(content_path)
+            style_image = load_image_for_inference(style_path)
 
             stylized_image = style_transfer(
                 content_image, style_image, encoder, decoder, alpha, device
