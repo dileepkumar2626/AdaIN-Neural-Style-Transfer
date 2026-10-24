@@ -64,6 +64,7 @@ class VGGEncoder(nn.Module):
         self.enc_2=nn.Sequential(*enc_layers[4:11])
         self.enc_3=nn.Sequential(*enc_layers[11:18])
         self.enc_4=nn.Sequential(*enc_layers[18:31])
+        del self.vgg
         for name in ["enc_1","enc_2","enc_3","enc_4"]:
             for param in getattr(self,name).parameters():
                 param.requires_grad=False

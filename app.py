@@ -48,6 +48,7 @@ from utils.models import VGGEncoder, Decoder
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
+MAX_INFERENCE_SIDE = 256
 load_dotenv()
 
 app = Flask(__name__)
@@ -638,18 +639,26 @@ def existing_user_image(filename):
         return None
     path = user_upload_dir() / filename
     return path if path.is_file() else None
+def load_image_for_inference(path, max_side=MAX_INFERENCE_SIDE):
+    """Load a stored image at a bounded resolution before retaining it in RAM.
 
+    Keep the original file on disk for history/downloads; only the inference copy
+    is resized. thumbnail() preserves aspect ratio and caps both dimensions.
+    """
+    with Image.open(path) as image:
+        image.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+        return image.convert("RGB")
 
 def style_transfer(content_image, style_image, encoder, decoder, alpha, device):
-    content_transform = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
-    style_transform = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
-
-    content_image = content_transform(content_image).unsqueeze(0).to(device)
-    style_image = style_transform(style_image).unsqueeze(0).to(device)
+    # content_transform = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
+    # style_transform = transforms.Compose([transforms.Resize(512), transforms.ToTensor()])
+    to_tensor = transforms.ToTensor()
+    content_tensor = to_tensor(content_image).unsqueeze(0).to(device)
+    style_tensor = to_tensor(style_image).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        content_feat = encoder(content_image, is_test=True)
-        style_feat = encoder(style_image, is_test=True)
+        content_feat = encoder(content_tensor, is_test=True)
+        style_feat = encoder(style_tensor, is_test=True)
         stylized_feat = adaptive_instance_normalizaiton(content_feat, style_feat)
         stylized_feat = alpha * stylized_feat + (1 - alpha) * content_feat
         stylized_image = decoder(stylized_feat)
