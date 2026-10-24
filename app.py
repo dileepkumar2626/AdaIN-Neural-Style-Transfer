@@ -118,6 +118,21 @@ UPLOAD_ROOT = Path(app.instance_path) / "user_uploads"
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 db = SQLAlchemy()
+import os
+
+database_url = os.environ.get("DATABASE_URL")
+
+if database_url:
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace(
+            "postgres://", "postgresql+psycopg://", 1
+        )
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace(
+            "postgresql://", "postgresql+psycopg://", 1
+        )
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 db.init_app(app)
 migrate = Migrate(app, db)  
 Bootstrap(app)
