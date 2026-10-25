@@ -104,9 +104,10 @@ def main():
                 l,lc,ls=losses.tolist()                
                 progress_bar.set_description(f'Loss:{l:4f}, Content Loss: {lc:4f}, Style Loss: {ls:4f}')
         scheduler.step()
-        running_loss,running_closs,running_sloss=(running/steps_per_epoch).tolist()   # per-step average
+        running_loss,running_closs,running_sloss=(running/steps_per_epoch).tolist()
+     
         if (epoch+1) % args.log_interval == 0:
-            tqdm.write(f'Iter {epoch+1}: Loss:{running_loss:4f}, Content Loss: {running_closs:4f}, Style Loss: {running_sloss:4f}')
+            tqdm.write(f'Epoch {epoch+1}: Loss:{running_loss:4f}, Content Loss: {running_closs:4f}, Style Loss: {running_sloss:4f}')
         if (epoch+1) % args.save_interval == 0:
             torch.save(decoder.state_dict(), save_dir / f'decoder_{epoch+1}.pth')
             torch.save(optimizer.state_dict(), save_dir / f'optimizer_{epoch+1}.pth')

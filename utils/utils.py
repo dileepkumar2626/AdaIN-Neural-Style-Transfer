@@ -22,7 +22,7 @@ class ImageFolderdataset(Dataset):
         image_path = os.path.join(self.root, self.files[indx])
         image = Image.open(image_path)
         if self.draft_size > 0:
-            image.draft("RGB", (self.draft_size, self.draft_size))  # no-op for PNG
+            image.draft("RGB", (self.draft_size, self.draft_size))
         image = image.convert("RGB")
         if self.transform:
             image = self.transform(image)
