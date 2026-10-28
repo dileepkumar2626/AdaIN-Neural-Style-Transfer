@@ -1,44 +1,26 @@
-"""StyleForge AI - Streamlit version of the Flask/HTML front-end.
-
-Same model, same look, no login/database: pick a content photo, pick a style
-(preset or upload), set the strength and press "Transfer Style".
-
-Run locally from the repo root:
-    streamlit run streamlit_demo/app.py
-"""
 from __future__ import annotations
-
 import base64
 import io
 import json
 import sys
 import time
 from pathlib import Path
-
 import streamlit as st
 import torch
 from PIL import Image, ImageOps
 from torchvision import transforms
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-
-from utils.models import Decoder, VGGEncoder  # noqa: E402
-from utils.utils import adaptive_instance_normalizaiton  # noqa: E402
-
+from utils.models import Decoder, VGGEncoder 
+from utils.utils import adaptive_instance_normalizaiton
 VGG_PATH = ROOT / "vgg_normalised.pth"
 DECODER_PATH = ROOT / "experiment" / "experiment1" / "decoder_128.pth"
 STYLES_DIR = ROOT / "static" / "styles"
 EXAMPLES_DIR = ROOT / "examples"
 ALLOWED_TYPES = ["png", "jpg", "jpeg"]
-MAX_TOTAL_BYTES = 10 * 1024 * 1024  # same 10 MB limit as the Flask app
-
+MAX_TOTAL_BYTES = 10 * 1024 * 1024  
 st.set_page_config(page_title="StyleForge AI", page_icon="🎨", layout="wide")
-
-# --------------------------------------------------------------------------
-# Look & feel (ported from templates/index.html)
-# --------------------------------------------------------------------------
 st.markdown(
     """
 <style>
@@ -87,11 +69,6 @@ div.stButton > button[kind="primary"]:hover { filter: brightness(1.1); }
 """,
     unsafe_allow_html=True,
 )
-
-
-# --------------------------------------------------------------------------
-# Model (loaded once per server process, shared by all visitors)
-# --------------------------------------------------------------------------
 @st.cache_resource(show_spinner="Loading the AdaIN model…")
 def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -103,8 +80,6 @@ def load_model():
     encoder.eval()
     decoder.eval()
     return encoder, decoder, device
-
-
 def stylize(content: Image.Image, style: Image.Image, alpha: float) -> Image.Image:
     encoder, decoder, device = load_model()
     to_tensor = transforms.ToTensor()
@@ -118,14 +93,7 @@ def stylize(content: Image.Image, style: Image.Image, alpha: float) -> Image.Ima
         out = decoder(t_feat)
     out = out.squeeze(0).cpu().clamp(0, 1)
     img = transforms.ToPILImage()(out)
-    # The encoder rounds sizes up to a multiple of 8; crop back to the input size
-    # so "before" and "after" line up exactly.
     return img.crop((0, 0, content.width, content.height))
-
-
-# --------------------------------------------------------------------------
-# Helpers
-# --------------------------------------------------------------------------
 def prepare(img: Image.Image, max_side: int) -> Image.Image:
     img = ImageOps.exif_transpose(img).convert("RGB")
     img.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)  # never upscales
@@ -182,7 +150,7 @@ def style_thumb(file_name: str) -> bytes:
 def style_full(file_name: str) -> Image.Image:
     """Preset style at inference size only (some originals are > 6000 px wide)."""
     with Image.open(STYLES_DIR / file_name) as im:
-        im.draft("RGB", (1024, 1024))  # fast JPEG downscale on decode
+        im.draft("RGB", (1024, 1024)) 
         return im.convert("RGB")
 
 
@@ -231,20 +199,11 @@ def compare_slider(before: Image.Image, after: Image.Image):
         st.iframe(html, height=h)
     else:
         st.components.v1.html(html, height=h)
-
-
-# --------------------------------------------------------------------------
-# Session state
-# --------------------------------------------------------------------------
 st.session_state.setdefault("style_id", None)
 st.session_state.setdefault("result", None)
 
 library = load_style_library()
 by_id = {s["id"]: s for s in library}
-
-# --------------------------------------------------------------------------
-# Hero
-# --------------------------------------------------------------------------
 st.markdown(
     '<div class="hero"><h1>STYLEFORGE AI</h1>'
     "<p>Redefine Reality with AI-Powered Artistry</p></div>",
@@ -256,11 +215,7 @@ if missing:
     st.error("Model files are missing from the repository: " + ", ".join(missing))
     st.stop()
 
-load_model()  # warm up now so the first "Transfer Style" click is fast
-
-# --------------------------------------------------------------------------
-# Content + style upload
-# --------------------------------------------------------------------------
+load_model()
 col_c, col_s = st.columns(2, gap="large")
 
 with col_c:
@@ -291,10 +246,6 @@ with col_s:
         else:
             st.markdown('<div class="placeholder">🎨 Upload a style image, or pick one '
                         "from the Style Library below</div>", unsafe_allow_html=True)
-
-# --------------------------------------------------------------------------
-# Style library
-# --------------------------------------------------------------------------
 with st.container(border=True):
     st.markdown('<div class="card-title">Style Library</div>', unsafe_allow_html=True)
     categories = list(dict.fromkeys(s["category"] for s in library))
@@ -316,10 +267,6 @@ with st.container(border=True):
                     st.rerun()
     st.markdown('<p class="small-note">Pick a preset above, or upload your own style image in the box.</p>',
                 unsafe_allow_html=True)
-
-# --------------------------------------------------------------------------
-# Strength + run
-# --------------------------------------------------------------------------
 with st.container(border=True):
     st.markdown('<div class="card-title">Style Strength</div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 6, 1])
@@ -358,10 +305,6 @@ if go:
             st.session_state.result = None
             st.error("Style transfer failed. Please try different images.")
             st.caption(f"Details: {exc}")
-
-# --------------------------------------------------------------------------
-# Result
-# --------------------------------------------------------------------------
 r = st.session_state.result
 if r:
     with st.container(border=True):
@@ -379,10 +322,6 @@ if r:
         st.download_button("⬇ Download PNG", data=png_bytes(r["output"]),
                            file_name="styleforge_result.png", mime="image/png",
                            type="primary", width="stretch")
-
-# --------------------------------------------------------------------------
-# Examples
-# --------------------------------------------------------------------------
 st.markdown('<div class="section-title">Examples</div>', unsafe_allow_html=True)
 st.markdown('<p class="small-note">Content image + style image → output.</p>', unsafe_allow_html=True)
 examples = [
@@ -399,10 +338,6 @@ for content_name, style_name_, out_name in examples:
             with col:
                 st.caption(label)
                 st.image(str(p), width="stretch")
-
-# --------------------------------------------------------------------------
-# FAQ
-# --------------------------------------------------------------------------
 st.markdown('<div class="section-title">FAQ</div>', unsafe_allow_html=True)
 FAQ = [
     ("How do I turn my photo into art?",

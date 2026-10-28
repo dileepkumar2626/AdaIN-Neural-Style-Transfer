@@ -48,7 +48,6 @@ from utils.models import VGGEncoder, Decoder
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
-# Keep inference memory bounded for small hosted instances such as Render Free.
 MAX_INFERENCE_SIDE = 256
 load_dotenv()
 
@@ -59,19 +58,12 @@ if not app.config["SECRET_KEY"]:
     raise RuntimeError("Set SECRET_KEY in your .env file.")
 
 csrf = CSRFProtect(app)
-
-# Behind Nginx / Caddy / Cloudflare Tunnel every request would otherwise look like
-# it comes from the proxy's IP, so rate limits would hit all users at once.
-# Set TRUSTED_PROXY=1 only when you really are behind exactly one proxy.
 if os.environ.get("TRUSTED_PROXY", "0") == "1":
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # Password reset
-app.config["RESET_TOKEN_MAX_AGE"] = int(os.environ.get("RESET_TOKEN_MAX_AGE", "3600"))  # seconds
-APP_BASE_URL = os.environ.get("APP_BASE_URL", "").rstrip("/")  # e.g. https://styleforge.example.com
-
-# Rate limiting (in-memory by default; use Redis when running several workers/servers:
-# RATELIMIT_STORAGE_URI=redis://localhost:6379)
+app.config["RESET_TOKEN_MAX_AGE"] = int(os.environ.get("RESET_TOKEN_MAX_AGE", "3600"))  
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "").rstrip("/") 
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -81,11 +73,6 @@ limiter = Limiter(
 
 
 def normalise_database_url(url):
-    """Make hosted-Postgres URLs work with the psycopg (v3) driver.
-
-    Handles: postgres://, postgresql://  (-> postgresql+psycopg://)
-    Leaves sqlite:// and explicit driver URLs (postgresql+psycopg2://) alone.
-    """
     url = url.strip()
     if url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql+psycopg://", 1)
@@ -118,9 +105,6 @@ app.config["ALLOWED_EXTENSIONS"] = {"png", "jpg", "jpeg"}
 Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 UPLOAD_ROOT = Path(app.instance_path) / "user_uploads"
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
-
-# SQLAlchemy's URI was configured above, including the SQLite fallback.
-# Do not overwrite it here: DATABASE_URL may be unset in local development.
 db = SQLAlchemy()
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -197,7 +181,6 @@ def cleanup_session(exc):
 
 
 def is_ajax():
-    """True for fetch/XHR calls made by the interactive front-end."""
     return (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
         or request.accept_mimetypes.best == "application/json"
@@ -260,14 +243,12 @@ class ResetPasswordForm(FlaskForm):
         validators=[DataRequired(), EqualTo("password", message="Passwords do not match.")],
     )
     submit = SubmitField("Reset password")
-
-
 class UploadForm(FlaskForm):
     content = FileField("Content_Image")
     style = FileField("Style_Image")
     content_path = HiddenField()
     style_path = HiddenField()
-    style_id = HiddenField()   # id of a preset from the style library (static/styles)
+    style_id = HiddenField() 
     alpha = FloatField("Alpha", default=1.0)
     submit = SubmitField("Transfer Style")
 @app.route("/register", methods=["GET", "POST"])
@@ -331,36 +312,19 @@ def login():
         user = db.session.execute(
             db.select(User).where(db.func.lower(User.email) == email)
         ).scalars().first()
-
         if user and user.check_password(form.password.data):
             login_user(user)
             flash("Welcome back!", "success")
             return redirect(url_for("index"))
-
         flash("Invalid email or password.", "danger")
-
     return render_template("login.html", form=form)
-
-
-# --------------------------------------------------
-# Password reset (forgot password)
-# --------------------------------------------------
 def _reset_serializer():
     return URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="password-reset-v1")
-
-
 def _password_fingerprint(user):
-    # Part of the token: once the password changes the fingerprint changes, so
-    # a reset link can be used exactly once and old links die automatically.
     return hashlib.sha256(user.password_hash.encode("utf-8")).hexdigest()[:20]
-
-
 def make_reset_token(user):
     return _reset_serializer().dumps({"uid": user.id, "fp": _password_fingerprint(user)})
-
-
 def read_reset_token(token):
-    """Return (user, None) on success or (None, 'expired' | 'invalid')."""
     try:
         data = _reset_serializer().loads(token, max_age=app.config["RESET_TOKEN_MAX_AGE"])
     except SignatureExpired:
@@ -371,15 +335,10 @@ def read_reset_token(token):
     if user is None or data.get("fp") != _password_fingerprint(user):
         return None, "invalid"
     return user, None
-
-
 def external_url(endpoint, **values):
-    """Absolute URL for e-mails. APP_BASE_URL avoids trusting the Host header."""
     if APP_BASE_URL:
         return APP_BASE_URL + url_for(endpoint, **values)
     return url_for(endpoint, _external=True, **values)
-
-
 def _send_smtp(message):
     server = os.environ["MAIL_SERVER"]
     port = int(os.environ.get("MAIL_PORT", "587"))
@@ -395,8 +354,6 @@ def _send_smtp(message):
         if username:
             smtp.login(username, password or "")
         smtp.send_message(message)
-
-
 def send_email(to_address, subject, text_body, html_body=None):
     """Send in a background thread so the response time never reveals whether
     an account exists. Without MAIL_SERVER the message is printed to the log
@@ -405,7 +362,6 @@ def send_email(to_address, subject, text_body, html_body=None):
         logger.warning("MAIL_SERVER not set - e-mail NOT sent. To: %s | %s\n%s",
                        to_address, subject, text_body)
         return
-
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = os.environ.get("MAIL_FROM") or os.environ.get("MAIL_USERNAME") or "no-reply@localhost"
@@ -413,16 +369,12 @@ def send_email(to_address, subject, text_body, html_body=None):
     message.set_content(text_body)
     if html_body:
         message.add_alternative(html_body, subtype="html")
-
     def worker():
         try:
             _send_smtp(message)
         except Exception:
             logger.exception("Could not send e-mail to %s", to_address)
-
     threading.Thread(target=worker, daemon=True).start()
-
-
 def send_reset_email(user):
     link = external_url("reset_password", token=make_reset_token(user))
     minutes = app.config["RESET_TOKEN_MAX_AGE"] // 60
@@ -441,8 +393,6 @@ def send_reset_email(user):
         f"<p style='color:#666'>If you didn't ask for this, ignore this e-mail; your password stays the same.</p>"
     )
     send_email(user.email, "Reset your StyleForge AI password", text, html)
-
-
 def send_password_changed_email(user):
     send_email(
         user.email,
@@ -450,8 +400,6 @@ def send_password_changed_email(user):
         f"Hi {user.username},\n\nYour password was just changed. If this wasn't you, "
         f"reset it again right away and contact support.",
     )
-
-
 @app.route("/forgot-password", methods=["GET", "POST"])
 @limiter.limit("5 per hour; 15 per day", methods=["POST"])
 def forgot_password():
@@ -466,12 +414,9 @@ def forgot_password():
                 send_reset_email(user)
             except Exception:
                 logger.exception("Could not build reset e-mail")
-        # Same answer whether or not the account exists (no account enumeration).
         flash("If an account exists for that e-mail, we've sent a link to reset the password.", "success")
         return redirect(url_for("login"))
     return render_template("forgot_password.html", form=form)
-
-
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
 @limiter.limit("10 per hour", methods=["POST"])
 def reset_password(token):
@@ -483,7 +428,6 @@ def reset_password(token):
             "danger",
         )
         return redirect(url_for("forgot_password"))
-
     form = ResetPasswordForm()
     if form.validate_on_submit():
         user.set_password(form.password.data)
@@ -498,16 +442,9 @@ def reset_password(token):
         flash("Password updated. You can log in now.", "success")
         return redirect(url_for("login"))
     return render_template("reset_password.html", form=form)
-
-
-# --------------------------------------------------
-# Style library (preset styles users can pick)
-# --------------------------------------------------
 STYLES_DIR = BASE_DIR / "static" / "styles"
 STYLE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,60}$")
 STYLE_EXTENSIONS = (".jpg", ".jpeg", ".png")
-
-
 def load_style_library():
     """Read static/styles/styles.json; any image in that folder that is not listed
     is added automatically so people can just drop a file in."""
@@ -547,14 +484,10 @@ def load_style_library():
         i["thumb"] = f"styles/thumbs/{i['file']}" if thumb.is_file() else f"styles/{i['file']}"
         i["image"] = f"styles/{i['file']}"
     return items
-
-
 STYLE_LIBRARY = load_style_library()
 STYLE_BY_ID = {s["id"]: s for s in STYLE_LIBRARY}
 STYLE_CATEGORIES = list(dict.fromkeys(s["category"] for s in STYLE_LIBRARY))
 PRESET_NAME_RE = re.compile(r"^preset_([a-z0-9][a-z0-9_-]*)\.(?:jpg|jpeg|png)$")
-
-
 def copy_preset_to_user(style):
     """Copy a preset into the user's own folder (once) so history, reuse and delete
     work exactly like they do for uploaded styles, with no database change."""
@@ -564,20 +497,13 @@ def copy_preset_to_user(style):
     if not destination.is_file():
         shutil.copyfile(STYLES_DIR / style["file"], destination)
     return name
-
-
 def preset_label(filename):
     match = PRESET_NAME_RE.match(filename or "")
     style = STYLE_BY_ID.get(match.group(1)) if match else None
     return style["name"] if style else None
-
-
 @app.context_processor
 def inject_style_library():
     return {"style_library": STYLE_LIBRARY, "style_categories": STYLE_CATEGORIES}
-
-
-
 @app.route("/logout", methods=["POST"])
 @login_required
 def logout():
@@ -595,21 +521,15 @@ decoder.load_state_dict(
 )
 encoder.eval()
 decoder.eval()
-
-
 def allowed_file(filename):
     return (
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
     )
-
-
 def user_upload_dir():
     directory = UPLOAD_ROOT / str(current_user.id)
     directory.mkdir(parents=True, exist_ok=True)
     return directory
-
-
 def save_uploaded_file(file_storage):
     """Save a new image with a unique name in the user's own directory."""
     original_name = secure_filename(file_storage.filename or "")
@@ -619,16 +539,12 @@ def save_uploaded_file(file_storage):
     filename = f"{uuid.uuid4().hex}.{extension}"
     file_storage.save(user_upload_dir() / filename)
     return filename
-
-
 def existing_user_image(filename):
     """Only allow previously saved images belonging to this user."""
     if not filename or Path(filename).name != filename:
         return None
     path = user_upload_dir() / filename
     return path if path.is_file() else None
-
-
 def load_image_for_inference(path, max_side=MAX_INFERENCE_SIDE):
     """Load a stored image at a bounded resolution before retaining it in RAM.
 
@@ -641,8 +557,6 @@ def load_image_for_inference(path, max_side=MAX_INFERENCE_SIDE):
 
 
 def style_transfer(content_image, style_image, encoder, decoder, alpha, device):
-    # Images are already capped at MAX_INFERENCE_SIDE by load_image_for_inference.
-    # Do not Resize(512) here: that would upscale them and recreate the memory spike.
     to_tensor = transforms.ToTensor()
     content_tensor = to_tensor(content_image).unsqueeze(0).to(device)
     style_tensor = to_tensor(style_image).unsqueeze(0).to(device)
@@ -687,13 +601,13 @@ def index():
 
             preset = None
             if form.style.data and form.style.data.filename:
-                style_filename = save_uploaded_file(form.style.data)       # 1) uploaded file wins
-            elif (form.style_id.data or "").strip():                         # 2) preset from the library
+                style_filename = save_uploaded_file(form.style.data)      
+            elif (form.style_id.data or "").strip():                        
                 preset = STYLE_BY_ID.get(form.style_id.data.strip())
                 if preset is None:
                     raise ValueError("That style is not available. Pick another one.")
                 style_filename = copy_preset_to_user(preset)
-            else:                                                            # 3) re-use earlier style
+            else:                                                           
                 style_filename = form.style_path.data
 
             content_path = existing_user_image(content_filename)
@@ -707,10 +621,6 @@ def index():
             alpha = float(form.alpha.data)
             if not 0.0 <= alpha <= 1.0:
                 raise ValueError("Style strength must be between 0 and 1.")
-
-            # Resize each source as it is opened. Some preset images are over
-            # 6000 px wide, so converting both originals to RGB first can consume
-            # a large amount of RAM on small Render instances.
             content_image = load_image_for_inference(content_path)
             style_image = load_image_for_inference(style_path)
 
