@@ -23,7 +23,8 @@ def parse_arguments():
     parser.add_argument("--batch_size",type=int ,default=16,help="Batch size")
     parser.add_argument('--lr', type=float, default=1e-4,help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=5e-5,help='Learning rate decay')
-    parser.add_argument('--epochs', type=int, default=200,help='Number of epochs')
+    parser.add_argument('--epochs', type=int, default=200,help='Target total epoch count (not additional epochs)')
+    parser.add_argument('--start_epoch', type=int, default=0,help='Number of already-completed epochs; used with --resume')
     parser.add_argument('--content_weight', type=float, default=1.0,help='Content weight')
     parser.add_argument('--style_weight', type=float, default=5,help='Style weight')
     parser.add_argument('--log_interval', type=int, default=1,help='Log interval')
@@ -69,13 +70,15 @@ def main():
     optimizer=optim.Adam(decoder.parameters(),lr=args.lr)
     scheduler=optim.lr_scheduler.LambdaLR(optimizer,lr_lambda=lambda epoch:1.0/(1.0+args.lr_decay*epoch))
     if args.resume:
-        decoder.load_state_dict(torch.load(args.decoder_path,map_location=device))
-        optimizer.load_state_dict(torch.load(args.optimizer_path,map_location=device))
+        decoder.load_state_dict(torch.load(args.decoder_path,map_location=device,weights_only=True))
+        optimizer.load_state_dict(torch.load(args.optimizer_path,map_location=device,weights_only=False))
+        if args.start_epoch > 0:
+            scheduler.last_epoch = args.start_epoch - 1
     print("Training...")
     mse_loss=torch.nn.MSELoss()
     encoder.eval()
     steps_per_epoch=min(len(content_dataloader),len(style_datalaoder))
-    for epoch in range(args.epochs):
+    for epoch in range(args.start_epoch, args.epochs):
         progress_bar=tqdm(zip(content_dataloader,style_datalaoder),total=steps_per_epoch)
         running=torch.zeros(3,device=device)
         for step,(content_batch,style_batch) in enumerate(progress_bar):

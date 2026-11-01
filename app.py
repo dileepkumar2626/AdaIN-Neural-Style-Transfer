@@ -12,6 +12,8 @@ from email.message import EmailMessage
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+
 import torch
 from dotenv import load_dotenv
 from flask import (
@@ -45,6 +47,13 @@ from wtforms.validators import DataRequired, EqualTo, Length
 
 from utils.utils import adaptive_instance_normalizaiton
 from utils.models import VGGEncoder, Decoder
+
+try:
+    from face_preservation.face_parser import get_face_mask
+    from face_preservation.blending import preserve_face as _preserve_face
+    _FACE_PRESERVE_AVAILABLE = True
+except Exception:
+    _FACE_PRESERVE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
@@ -630,7 +639,27 @@ def index():
 
             result_filename = f"{uuid.uuid4().hex}_result.png"
             result_path = user_upload_dir() / result_filename
-            save_image(stylized_image, result_path)
+
+            if _FACE_PRESERVE_AVAILABLE:
+                original_np = np.array(content_image)
+                stylized_np = (
+                    stylized_image.cpu().clone().squeeze(0).clamp(0, 1)
+                    .permute(1, 2, 0).numpy() * 255
+                ).astype(np.uint8)
+                if original_np.shape == stylized_np.shape:
+                    face_mask = get_face_mask(original_np)
+                    if face_mask.any():
+                        blended = _preserve_face(
+                            original_np, stylized_np, face_mask,
+                            preserve_strength=0.7, feather_radius=15,
+                        )
+                        Image.fromarray(blended).save(result_path)
+                    else:
+                        save_image(stylized_image, result_path)
+                else:
+                    save_image(stylized_image, result_path)
+            else:
+                save_image(stylized_image, result_path)
             record = StyleTransfer(
                 user_id=current_user.id,
                 content_filename=content_filename,

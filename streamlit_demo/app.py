@@ -5,6 +5,7 @@ import json
 import sys
 import time
 from pathlib import Path
+import numpy as np
 import streamlit as st
 import torch
 from PIL import Image, ImageOps
@@ -12,8 +13,15 @@ from torchvision import transforms
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from utils.models import Decoder, VGGEncoder 
+from utils.models import Decoder, VGGEncoder
 from utils.utils import adaptive_instance_normalizaiton
+
+try:
+    from face_preservation.face_parser import get_face_mask
+    from face_preservation.blending import preserve_face as _preserve_face
+    _FACE_PRESERVE_AVAILABLE = True
+except Exception:
+    _FACE_PRESERVE_AVAILABLE = False
 VGG_PATH = ROOT / "vgg_normalised.pth"
 DECODER_PATH = ROOT / "experiment" / "experiment1" / "decoder_128.pth"
 STYLES_DIR = ROOT / "static" / "styles"
@@ -277,6 +285,27 @@ with st.container(border=True):
         res = st.select_slider("Processing size (longest side, px)", options=[256, 384, 512], value=256,
                                help="256 is fastest. Larger is sharper but slower and uses more memory.")
 
+if _FACE_PRESERVE_AVAILABLE:
+    with st.container(border=True):
+        st.markdown('<div class="card-title">Face Preservation</div>', unsafe_allow_html=True)
+        _, fmid, _ = st.columns([1, 6, 1])
+        with fmid:
+            preserve_faces = st.checkbox(
+                "Preserve facial features",
+                value=True,
+                help="Blend the original face back into the stylized result to keep identity and expression.",
+            )
+            preserve_strength = st.slider(
+                "Preservation strength",
+                0.0, 1.0, 0.7, 0.05,
+                help="How much of the original face to retain inside the detected face region. "
+                     "0.5–0.7 gives a natural blend; 1.0 keeps the face pixels unchanged.",
+                disabled=not preserve_faces,
+            )
+else:
+    preserve_faces = False
+    preserve_strength = 0.7
+
 ready = content_img is not None and (style_upload_img is not None or preset is not None)
 _, btn, _ = st.columns([1, 2, 1])
 with btn:
@@ -298,6 +327,18 @@ if go:
                 c = prepare(content_img, res)
                 s = prepare(style_src, res)
                 out = stylize(c, s, alpha)
+                if preserve_faces and _FACE_PRESERVE_AVAILABLE:
+                    original_np = np.array(c)
+                    stylized_np = np.array(out)
+                    if original_np.shape == stylized_np.shape:
+                        face_mask = get_face_mask(original_np)
+                        if face_mask.any():
+                            blended_np = _preserve_face(
+                                original_np, stylized_np, face_mask,
+                                preserve_strength=preserve_strength,
+                                feather_radius=15,
+                            )
+                            out = Image.fromarray(blended_np)
                 status.update(label=f"Done in {time.time() - t0:.1f}s", state="complete", expanded=False)
             st.session_state.result = {"content": c, "output": out, "alpha": alpha,
                                        "style": style_name, "res": res}
