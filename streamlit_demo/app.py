@@ -23,7 +23,7 @@ try:
 except Exception:
     _FACE_PRESERVE_AVAILABLE = False
 VGG_PATH = ROOT / "vgg_normalised.pth"
-DECODER_PATH = ROOT / "experiment" / "experiment1" / "decoder_128.pth"
+DECODER_PATH = ROOT / "experiment" / "experiment200" / "decoder_126.pth"
 STYLES_DIR = ROOT / "static" / "styles"
 EXAMPLES_DIR = ROOT / "examples"
 ALLOWED_TYPES = ["png", "jpg", "jpeg"]
