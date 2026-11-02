@@ -10,7 +10,7 @@ Transform a photograph with the colour, texture, and visual character of another
 ![Flask](https://img.shields.io/badge/Web-Flask-black?logo=flask)
 ![Streamlit](https://img.shields.io/badge/Demo-Streamlit-ff4b4b?logo=streamlit&logoColor=white)
 
-**[Open the live Streamlit demo](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
+**[Open the live Streamlit demo](https://adain-neural-style-transfer-nc755sseypejksgcwxs7ec.streamlit.app/)**
 
 </div>
 
@@ -31,7 +31,7 @@ The model checkpoints are included. You can run inference without downloading a 
 
 ## Try it online
 
-**[🎨 Launch StyleForge AI](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
+**[🎨 Launch StyleForge AI](https://adain-neural-style-transfer-nc755sseypejksgcwxs7ec.streamlit.app/)**
 
 Upload a content image, choose a preset or upload a style reference, adjust the style strength, and generate an image directly in your browser.
 
@@ -114,18 +114,6 @@ flowchart TD
 6. **Preserve the face when available.** A face mask is generated from the resized content image. A blurred mask controls how much of the original face is blended back into the stylized result.
 
 ### AdaIN and style strength
-
-For content features \(x\) and style features \(y\), AdaIN is computed as:
-
-\[
-\operatorname{AdaIN}(x,y)=\sigma(y)\left(\frac{x-\mu(x)}{\sigma(x)}\right)+\mu(y)
-\]
-
-The interface then blends the AdaIN result with the original content features:
-
-\[
-t=\alpha\,\operatorname{AdaIN}(x,y)+(1-\alpha)x
-\]
 
 The means and standard deviations are calculated per feature channel. A small epsilon is used when calculating standard deviations to avoid division by zero.
 
