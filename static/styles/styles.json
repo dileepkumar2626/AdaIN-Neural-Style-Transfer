@@ -110,5 +110,64 @@
     "category": "Sketch",
     "description": "Cross-hatched pen on cream paper",
     "file": "ink-sketch.jpg"
-  }
+  },
+
+  { "id": "seurat-bathers-seine",      "name": "Seurat Bathers",           "category": "Impressionism", "description": "Pointillist summer scene on the Seine",                     "file": "seurat-bathers-seine.jpg" },
+  { "id": "pointillist-portrait",       "name": "Pointillist Portrait",      "category": "Impressionism", "description": "Lady by a fireplace rendered in coloured dots",             "file": "pointillist-portrait.jpg" },
+  { "id": "morisot-meadow-walk",        "name": "Morisot Meadow Walk",       "category": "Impressionism", "description": "Berthe Morisot — woman and child in an open field",         "file": "morisot-meadow-walk.jpg" },
+  { "id": "garden-ladies",              "name": "Ladies in the Garden",      "category": "Impressionism", "description": "Three elegant women on a sun-dappled garden bench",         "file": "garden-ladies.jpg" },
+  { "id": "hassam-winter-snow",         "name": "Hassam Winter Snow",        "category": "Impressionism", "description": "Childe Hassam — figures shovelling a snowy landscape",      "file": "hassam-winter-snow.jpg" },
+  { "id": "chase-country-road",         "name": "Chase Country Road",        "category": "Impressionism", "description": "William Merritt Chase — dusty road through open heath",      "file": "chase-country-road.jpg" },
+  { "id": "tissot-victorian-garden",    "name": "Tissot Victorian Garden",   "category": "Impressionism", "description": "Victorian women and a child lounging on lawn",              "file": "tissot-victorian-garden.jpg" },
+  { "id": "blanchard-paris-street",     "name": "Paris Street Scene",        "category": "Impressionism", "description": "Antoine Blanchard — Gare du Nord in rain and gaslight",     "file": "blanchard-paris-street.jpg" },
+
+  { "id": "rubens-rainbow-harvest",     "name": "Rubens Rainbow Harvest",    "category": "Painting",      "description": "Baroque landscape with a double rainbow and farmhands",     "file": "rubens-rainbow-harvest.jpg" },
+  { "id": "fra-angelico-lamentation",   "name": "Fra Angelico Lamentation",  "category": "Painting",      "description": "Renaissance gold-ground altarpiece with haloed saints",      "file": "fra-angelico-lamentation.jpg" },
+  { "id": "roman-classical-gathering",  "name": "Roman Classical Gathering", "category": "Painting",      "description": "Neo-classical interior with toga-clad figures",               "file": "roman-classical-gathering.jpg" },
+  { "id": "dutch-merry-company",        "name": "Dutch Merry Company",       "category": "Painting",      "description": "Golden Age revelry — Jan Steen interior of laughing figures", "file": "dutch-merry-company.jpg" },
+  { "id": "denis-nabi-garden",          "name": "Denis Nabi Garden",         "category": "Painting",      "description": "Maurice Denis Symbolist-Nabi garden scene",                 "file": "denis-nabi-garden.jpg" },
+  { "id": "garden-girls-flowers",       "name": "Girls with Flowers",        "category": "Painting",      "description": "Two girls watering blooms in a lush classical garden",       "file": "garden-girls-flowers.jpg" },
+  { "id": "dark-kitchen-interior",      "name": "Smoky Kitchen Interior",    "category": "Painting",      "description": "Dark, smoky interior with a resting figure",                 "file": "dark-kitchen-interior.jpg" },
+
+  { "id": "shishkin-rye-field",         "name": "Shishkin Rye Field",        "category": "Landscape",     "description": "Ivan Shishkin — golden rye beneath towering Scots pines",   "file": "shishkin-rye-field.jpg" },
+  { "id": "barbizon-stormy-pastoral",   "name": "Barbizon Stormy Sky",       "category": "Landscape",     "description": "Barbizon-school cattle under a dramatically clouded sky",    "file": "barbizon-stormy-pastoral.jpg" },
+  { "id": "greek-ruins-watercolor",     "name": "Greek Ruins Watercolor",    "category": "Landscape",     "description": "Watercolour of ancient temple columns with red poppies",     "file": "greek-ruins-watercolor.jpg" },
+  { "id": "sandy-riverbank-forest",     "name": "Sandy Riverbank",           "category": "Landscape",     "description": "Realist study of a sandy bank edging into forest",           "file": "sandy-riverbank-forest.jpg" },
+  { "id": "canal-boat-dusk",            "name": "Canal Boat at Dusk",        "category": "Landscape",     "description": "Romantic barge moored on a quiet canal at sunset",           "file": "canal-boat-dusk.jpg" },
+  { "id": "mediterranean-coastal-cliffs","name": "Mediterranean Coast",      "category": "Landscape",     "description": "Aerial view of rocky cliffs and a coastal village",          "file": "mediterranean-coastal-cliffs.jpg" },
+  { "id": "prairie-native-riders",      "name": "Prairie Riders",            "category": "Landscape",     "description": "Charles Russell style — Native horsemen on open prairie",    "file": "prairie-native-riders.jpg" },
+  { "id": "expressionist-spring-village","name": "Expressionist Village",    "category": "Landscape",     "description": "Bold-coloured Russian village emerging into spring",          "file": "expressionist-spring-village.jpg" },
+  { "id": "cezanne-style-village",      "name": "Village Below the Rocks",   "category": "Landscape",     "description": "Cézanne-influenced village with terracotta roofs and cliffs", "file": "cezanne-style-village.jpg" },
+
+  { "id": "lavender-dress-mirror",      "name": "Lavender Dress Mirror",     "category": "Portrait",      "description": "Elegant woman in a lavender gown before a tall mirror",      "file": "lavender-dress-mirror.jpg" },
+  { "id": "gentleman-portrait",         "name": "Gentleman Portrait",        "category": "Portrait",      "description": "Sober academic portrait of a distinguished gentleman",        "file": "gentleman-portrait.jpg" },
+  { "id": "romantic-love-letter",       "name": "Reading a Love Letter",     "category": "Portrait",      "description": "Romantic painting of a young woman reading a letter",        "file": "romantic-love-letter.jpg" },
+  { "id": "toulouse-lautrec-lady",      "name": "Toulouse-Lautrec Lady",     "category": "Portrait",      "description": "Post-Impressionist lithograph of a woman in profile",         "file": "toulouse-lautrec-lady.jpg" },
+  { "id": "modigliani-dark-portrait",   "name": "Modigliani Portrait",       "category": "Portrait",      "description": "Modigliani — elongated face with dark, brooding tones",       "file": "modigliani-dark-portrait.jpg" },
+  { "id": "romantic-white-cap-portrait","name": "Romantic White Cap",        "category": "Portrait",      "description": "Loose Romantic-era sketch of a young woman in a white cap",  "file": "romantic-white-cap-portrait.jpg" },
+  { "id": "portrait-woman-glasses",     "name": "Lady with Glasses",         "category": "Portrait",      "description": "Mid-century oil portrait of a woman wearing spectacles",       "file": "portrait-woman-glasses.jpg" },
+  { "id": "klimt-lace-portrait",        "name": "Klimt Lace Portrait",       "category": "Portrait",      "description": "Klimt-influenced dark portrait in silver-grey lace",          "file": "klimt-lace-portrait.jpg" },
+  { "id": "portrait-woman-blue-coat",   "name": "Blue Coat Portrait",        "category": "Portrait",      "description": "Mid-century seated woman in a blue coat with fur collar",     "file": "portrait-woman-blue-coat.jpg" },
+
+  { "id": "abstract-expressionist",     "name": "Abstract Expressionist",    "category": "Abstract",      "description": "Dynamic abstract forms in vivid mixed pigments",              "file": "abstract-expressionist.jpg" },
+  { "id": "klein-blue-texture",         "name": "Klein International Blue",  "category": "Abstract",      "description": "Deep ultramarine field of pure International Klein Blue",    "file": "klein-blue-texture.jpg" },
+  { "id": "juan-gris-cubist",           "name": "Cubist Still Life",         "category": "Abstract",      "description": "Juan Gris — geometric planes in ochre, green and black",      "file": "juan-gris-cubist.jpg" },
+  { "id": "chaissac-naive-figure",      "name": "Chaissac Naive Figure",     "category": "Abstract",      "description": "Gaston Chaissac outsider-art figure on green background",      "file": "chaissac-naive-figure.jpg" },
+  { "id": "expressionist-city-figure",  "name": "City Expressionist",        "category": "Abstract",      "description": "Otto Dix Expressionist — fragmented urban figure in red",      "file": "expressionist-city-figure.jpg" },
+  { "id": "minimalist-blue-sunset",     "name": "Minimalist Blue Sunset",    "category": "Abstract",      "description": "Spare composition — blue expanse with a single orange orb",    "file": "minimalist-blue-sunset.jpg" },
+
+  { "id": "mucha-winter-poster",        "name": "Mucha Winter",              "category": "Poster",        "description": "Alphonse Mucha Art Nouveau — Winter from The Seasons",        "file": "mucha-winter-poster.jpg" },
+
+  { "id": "daumier-art-gallery",        "name": "Daumier Art Gallery",       "category": "Genre",         "description": "Daumier — crowd of Parisians peering at a print seller",      "file": "daumier-art-gallery.jpg" },
+  { "id": "victorian-tavern-scene",     "name": "Victorian Tavern",          "category": "Genre",         "description": "Victorian genre scene — woman addresses men at a table",      "file": "victorian-tavern-scene.jpg" },
+  { "id": "rockwell-childrens-day",     "name": "Rockwell Children's Day",   "category": "Genre",         "description": "Norman Rockwell collage of children bathing and playing",     "file": "rockwell-childrens-day.jpg" },
+
+  { "id": "holy-family-etching",        "name": "Holy Family Etching",       "category": "Sketch",        "description": "19th-century Russian aquatint — Holy Family scene",           "file": "holy-family-etching.jpg" },
+  { "id": "scandinavian-troll-sketch",  "name": "Troll by the Shore",        "category": "Sketch",        "description": "Scandinavian folk illustration of a troll at water's edge",   "file": "scandinavian-troll-sketch.jpg" },
+  { "id": "russian-winter-village-sketch","name": "Russian Winter Village",  "category": "Sketch",        "description": "Pencil drawing of a Russian village with onion domes in snow","file": "russian-winter-village-sketch.jpg" },
+  { "id": "provence-mountains-etching", "name": "Provence Mountains",        "category": "Sketch",        "description": "Pencil-etching of rocky Provençal hills with olive trees",    "file": "provence-mountains-etching.jpg" },
+
+  { "id": "chrysanthemums-still-life",  "name": "Chrysanthemums",           "category": "Still Life",    "description": "Fantin-Latour bouquet of mixed chrysanthemums on dark ground","file": "chrysanthemums-still-life.jpg" },
+
+  { "id": "japanese-heian-court",       "name": "Japanese Heian Court",      "category": "Eastern",       "description": "Heian-period court painting in the Tale of Genji tradition",  "file": "japanese-heian-court.jpg" }
 ]

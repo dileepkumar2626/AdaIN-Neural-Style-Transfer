@@ -45,21 +45,18 @@ runs/
 logs/
 wandb/
 tensorboard/
-# *.pth
-decoder_124.pth
-# decoder_126.pth
-decoder_170.pth
-optimizer_124.pth
-# optimizer_126.pth
-optimizer_170.pth
-decoder
 *.pt
 *.ckpt
 *.onnx
+
+# experiment200 checkpoints — keep only the selected decoder
+experiment/experiment200/*.pth
+!experiment/experiment200/decoder_192.pth
+experiment/experiment200/output_*.png
 *.png
 !examples/*.png
 !examples/*.jpg
-
+experiment/experiment1/*.pth
 # Large datasets
 data/
 datasets/
