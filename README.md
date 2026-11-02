@@ -3,12 +3,14 @@
 # StyleForge AI
 ### Arbitrary Neural Style Transfer with Adaptive Instance Normalization
 
-Turn a photograph into a new visual style using PyTorch, a frozen VGG feature encoder, and a trained decoder. Use the included browser apps to try preset styles or upload your own reference image.
+Transform a photograph with the colour, texture, and visual character of another image. Built with PyTorch, a frozen VGG-19 feature encoder, an AdaIN-conditioned decoder, and two browser interfaces.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2.2-ee4c2c?logo=pytorch&logoColor=white)
 ![Flask](https://img.shields.io/badge/Web-Flask-black?logo=flask)
 ![Streamlit](https://img.shields.io/badge/Demo-Streamlit-ff4b4b?logo=streamlit&logoColor=white)
+
+**[Open the live Streamlit demo](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
 
 </div>
 
@@ -16,180 +18,218 @@ Turn a photograph into a new visual style using PyTorch, a frozen VGG feature en
 
 ## Overview
 
-**StyleForge AI** is an image-to-image application based on **Adaptive Instance Normalization (AdaIN)**. It separates the *content* of an image (the objects, scene, and broad composition) from the *style* of a reference image (such as its colour palette, textures, and brushwork), then combines them in a stylized output.
+**StyleForge AI** implements arbitrary neural style transfer using **Adaptive Instance Normalization (AdaIN)**. A content image supplies the scene and composition; a separate style image supplies feature statistics associated with its colours, textures, and brushwork. A trained decoder converts the blended feature representation back into an image.
 
-The repository contains the inference weights and two interfaces:
+The repository contains the trained model weights, a 65-image preset style library, example results, the training workflow, and two ways to use the model:
 
-- **Flask web application** — account registration and login, password-reset flow, an interactive style-transfer page, a preset style gallery, and per-account transfer history.
-- **Streamlit demo** — a lighter interface for quickly trying the model, comparing original and stylized images, and downloading results. It does not use the Flask accounts or database.
+| Interface | Intended use | Main capabilities |
+|---|---|---|
+| **Flask web application** | Full application with accounts | Registration, login, password reset, preset/custom styles, face preservation, and per-user transfer history. |
+| **Streamlit demo** | Quick public or local demo | No account required, preset/custom styles, adjustable processing size, adjustable face preservation, before/after comparison, and PNG download. |
 
-The pretrained VGG weights and decoder checkpoint are included in the repository archive, so **you can run inference without training the model again**.
+The model checkpoints are included. You can run inference without downloading a dataset or training the decoder again.
+
+## Try it online
+
+**[🎨 Launch StyleForge AI](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
+
+Upload a content image, choose a preset or upload a style reference, adjust the style strength, and generate an image directly in your browser.
 
 ## Example results
 
-The repository includes sample content images, style references, and stylized outputs.
+The repository includes example content images, style references, and generated outputs.
 
-| Content image | Style reference | Example output |
+| Content | Style reference | StyleForge output |
 |---|---|---|
-| ![Portrait content image](examples/brad%20pitt.jpg) | ![Sketch reference](examples/sketch.png) | ![Portrait rendered in sketch style](examples/stylized_brad_pitt.jpg) |
-| ![Portrait content image](examples/brad%20pitt.jpg) | ![Painting reference](examples/picasso%20seated%20nude%20hr.jpg) | ![Portrait with transferred painting style](examples/stylized_brad%20pitt%20(1).jpg) |
+| ![Portrait content image](examples/brad%20pitt.jpg) | ![Sketch style reference](examples/sketch.png) | ![Portrait rendered in sketch style](examples/stylized_brad_pitt.jpg) |
+| ![Portrait content image](examples/brad%20pitt.jpg) | ![Painting style reference](examples/picasso%20seated%20nude%20hr.jpg) | ![Portrait rendered with a painting style](examples/stylized_brad%20pitt%20(1).jpg) |
 
 ## Features
 
-### Image stylization
+### Neural style transfer
 
-- Transform a content photo using a separate style-reference image.
-- Choose from the bundled preset style gallery or upload your own PNG/JPG/JPEG style image.
-- Adjust style strength with the `alpha` value (also displayed as **Style Strength** in the UI).
-- Preview the generated image, compare it with the original, and download the result.
-- Reuse the last uploaded images in the Flask interface to try another preset or strength without selecting both files again.
+- Transfer the appearance of an arbitrary reference image; no per-style training is needed.
+- Choose from **65 bundled preset styles** across multiple categories or upload your own PNG/JPG/JPEG reference.
+- Adjust style strength (`alpha`) from `0.0` to `1.0`.
+- Preserve facial details with a face-mask-guided blend after the neural style-transfer pass.
+
+### Style library
+
+- Preset metadata is stored in `static/styles/styles.json`.
+- Full-size style images are stored in `static/styles/`; matching gallery thumbnails are in `static/styles/thumbs/`.
+- The Flask and Streamlit interfaces load the manifest and can discover additional image files added to the styles directory.
+- `tools/generate_styles.py` can regenerate the bundled illustrated style images and thumbnails.
 
 ### Flask application
 
-- Registration and login, with password hashes rather than plaintext passwords.
-- Password-reset tokens with an expiration time; SMTP delivery can be configured through environment variables.
-- CSRF protection on form submissions and rate limits for authentication-related endpoints.
-- Per-user image storage and protected image routes.
-- A transfer-history page with search, sorting, strength filters, downloads, and deletion.
-- SQLite for a local setup, with PostgreSQL support through `DATABASE_URL`.
-- A Gunicorn `Procfile` suitable as a starting point for Linux-based hosting.
+- Account registration and login with hashed passwords.
+- Password reset using time-limited, signed tokens; SMTP delivery is configurable.
+- CSRF protection and rate limits on registration, login, and password-reset POST requests.
+- User-specific upload directories and access-controlled image routes.
+- Saved transfer history with content/style/output previews, downloads, deletion, pagination, and browser-side search/filter/sort controls.
+- SQLite for local development and PostgreSQL support through `DATABASE_URL`.
+- Gunicorn startup configuration in `Procfile`.
 
 ### Streamlit demo
 
-- A simple interactive workflow without account setup or a database.
-- Built-in preset style selection and custom style uploads.
-- A before/after comparison slider and PNG download.
-- Selectable processing size: 256, 384, or 512 pixels on the longest side.
+- No login or database required.
+- Preset gallery with category selection and custom style uploads.
+- Adjustable processing size: 256, 384, or 512 pixels on the longest side.
+- Optional face-preservation control and adjustable preservation strength.
+- Before/after comparison slider, original/result tabs, and PNG download.
+- Uploaded images are processed for the active session and are not added to the Flask history database.
 
-## Flask routes at a glance
+## Architecture
 
-The Flask app is a server-rendered web application with an AJAX-enhanced transfer form; it does not expose a separate public REST API. The main transfer POST can return JSON for the browser interface.
+### Inference pipeline
 
-| Route | Access | Purpose |
-|---|---|---|
-| `/register` | Public | Create an account. |
-| `/login` | Public | Sign in. |
-| `/forgot-password` | Public | Request a password-reset email. |
-| `/reset-password/<token>` | Public, signed token required | Set a new password through a valid reset link. |
-| `/` | Login required | Upload/select content and style images and run inference. |
-| `/uploads/<filename>` | Login required; file ownership checked | Serve the current user's saved images and results. |
-| `/history` | Login required | Browse, filter, download, and delete previous transfers. |
-| `/history/<transfer_id>/delete` | Login required; POST | Delete a transfer record and images no longer used by another transfer. |
-| `/logout` | Login required; POST | End the session. |
-| `/examples/<path:filename>` | Public | Serve the bundled demonstration images. |
-
-Forms are protected by Flask-WTF CSRF protection. Authentication and password-reset POST endpoints have rate limits; see `app.py` for the exact values.
-## 🚀 Try It Live
-
-Want to try the AI without installing anything?
-
-**[🎨 Open AdaIN Neural Style Transfer — Live Demo](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
-
-Upload a content image and a style image, then experiment with AI-powered neural style transfer directly in your browser. No local installation required.
-
-
-
-## How the model works
-
-The app uses **Adaptive Instance Normalization (AdaIN)** to transfer the visual style of one image onto another. It uses a frozen VGG-19 encoder to extract features, applies AdaIN to transfer the style-image statistics, and then uses the trained decoder to turn those features back into an image.
-
-### Processing pipeline
+Both interfaces use the same model architecture and the same bundled inference checkpoint: `experiment/experiment200/decoder_192.pth`.
 
 ```mermaid
 flowchart TD
-    C["Content image"] --> CE["VGG-19 encoder: content features"]
-    S["Style reference image"] --> SE["VGG-19 encoder: style features"]
-    CE --> A["AdaIN: transfer style statistics"]
-    SE --> A
-    CE --> B["Blend features using alpha"]
+    C[Content image] --> CP[Image validation and resize]
+    S[Style reference] --> SP[Image validation and resize]
+    CP --> E[Frozen VGG-19 feature encoder]
+    SP --> E
+    E --> CF[Content features]
+    E --> SF[Style features]
+    CF --> A[AdaIN: match channel-wise style statistics]
+    SF --> A
+    CF --> B[Blend with original content features using alpha]
     A --> B
-    B --> D["Trained decoder"]
-    D --> O["Stylized output image"]
+    B --> D[Trained decoder]
+    D --> ST[Stylized image]
+    CP --> FM[Face-mask detection]
+    FM --> FB[Feathered face-preservation blend]
+    ST --> FB
+    CP --> FB
+    FB --> O[Final image]
 ```
 
-### Step by step
+1. **Prepare the images.** Each interface validates the image and converts it to RGB. Flask caps the inference copy at 256 pixels on its longest side. Streamlit lets the user select 256, 384, or 512 pixels. Aspect ratio is maintained.
+2. **Extract features.** The same frozen VGG-19-based encoder processes the content and style images. The model exposes four feature levels; inference uses the deepest feature representation (`relu4_1`).
+3. **Apply AdaIN.** The content feature map is normalized channel by channel, then scaled and shifted using the style feature map's channel-wise mean and standard deviation.
+4. **Control style strength.** `alpha` blends the AdaIN-transformed features with the original content features.
+5. **Decode.** The trained decoder reconstructs an RGB image from the blended feature map.
+6. **Preserve the face when available.** A face mask is generated from the resized content image. A blurred mask controls how much of the original face is blended back into the stylized result.
 
-1. **Encode both images.** The pretrained VGG-19 encoder extracts feature maps from the content photograph and the style reference. The encoder is frozen; inference does not update its weights.
-2. **Transfer the style statistics.** AdaIN normalizes the content features using the content image's channel-wise mean and standard deviation, then scales them using the style features' statistics.
-3. **Set the style strength.** The `alpha` value blends the style-transformed features with the original content features.
-4. **Decode the result.** The trained decoder converts the blended feature maps into the final stylized image.
+### AdaIN and style strength
 
-The core computation can be expressed without special equation formatting:
+For content features \(x\) and style features \(y\), AdaIN is computed as:
 
-```python
-content_normalized = (content_features - content_mean) / content_std
-adain_features = content_normalized * style_std + style_mean
-blended_features = alpha * adain_features + (1 - alpha) * content_features
-stylized_image = decoder(blended_features)
-```
+\[
+\operatorname{AdaIN}(x,y)=\sigma(y)\left(\frac{x-\mu(x)}{\sigma(x)}\right)+\mu(y)
+\]
 
-The means and standard deviations are calculated per feature channel. A small epsilon is added when calculating standard deviations to avoid division by zero.
+The interface then blends the AdaIN result with the original content features:
 
-### What the style-strength control means
+\[
+t=\alpha\,\operatorname{AdaIN}(x,y)+(1-\alpha)x
+\]
 
-| `alpha` value | Effect |
+The means and standard deviations are calculated per feature channel. A small epsilon is used when calculating standard deviations to avoid division by zero.
+
+| `alpha` | Expected effect |
+|---:|---|
+| `0.0` | Keeps the original content feature representation; little or no style transfer. |
+| `0.5` | Balances original content features and the AdaIN-transformed features. |
+| `1.0` | Applies the full AdaIN style transformation. |
+
+The control changes feature blending, not the amount of face preservation. Face preservation is a separate post-processing step.
+
+### Face-preservation pipeline
+
+The `face_preservation/` package contains two stages:
+
+- **Mask generation — `face_parser.py`:** MediaPipe Face Mesh is tried first to create a polygon mask around the face oval. If MediaPipe is unavailable or does not return landmarks, the code falls back to OpenCV's Haar-cascade face detector and builds an elliptical mask around a detected face.
+- **Blending — `blending.py`:** The mask is blurred to soften its boundary. The original content pixels and stylized pixels are blended inside the masked region according to `preserve_strength`.
+
+The interfaces expose this behaviour differently:
+
+| Interface | Behaviour in the current code |
 |---|---|
-| `0.0` | Uses the original content features, so the output should remain close to the content image. |
-| `0.5` | Blends the original content features with the AdaIN-transformed features. |
-| `1.0` | Uses the full AdaIN style transformation. |
+| Flask | Face preservation runs automatically when the face-preservation modules import successfully and a face is detected. Strength is fixed at `0.7`, with a feather radius of `15` pixels. |
+| Streamlit | The **Preserve facial features** checkbox is enabled by default when the modules are available. The user can turn it off and adjust preservation strength from `0.0` to `1.0` (default `0.7`). |
 
-Values between `0.0` and `1.0` provide a continuous trade-off between the original content appearance and the transferred style. The Flask app validates that `alpha` stays within this range.
+If the face detector finds no face, the neural style-transfer result is used without the additional blend. This is a lightweight face-region blending method, not a dedicated face-restoration or semantic face-parsing network; it can retain some original colour and texture in the face area.
 
-**You do not need to retrain the model for a new style image.** At inference time, the encoder extracts the new style image's feature statistics and the existing decoder generates the result. Training is only needed when you want to train or replace the decoder weights.
+### Training architecture
 
-### Included model files
+`train.py` trains the **decoder**, while keeping the VGG feature encoder frozen. For each training step it:
 
-| File | Purpose |
+- extracts content and style features at four encoder levels;
+- applies AdaIN to the deepest content/style feature maps;
+- decodes the transformed features;
+- compares the re-encoded generated image with the AdaIN target at the deepest feature level for the content loss;
+- calculates style loss from feature means and standard deviations across the four feature levels;
+- updates the decoder with Adam and steps a learning-rate scheduler.
+
+The script writes periodic decoder checkpoints, optimizer states, preview images, and the run arguments. It does not run validation or automatically select a best checkpoint.
+
+## Model files and active checkpoint
+
+| File | Role |
 |---|---|
-| `vgg_normalised.pth` | Weights loaded by the VGG feature encoder. |
-| `experiment/experiment1/decoder_128.pth` | Decoder checkpoint used by both web interfaces. |
-| `experiment/experiment1/optimizer_128.pth` | Optimizer state available if continuing a compatible training run. |
-| `experiment/experiment1/args.txt` | Recorded arguments for the bundled experiment checkpoint. |
+| `vgg_normalised.pth` | Pretrained VGG-19 feature-encoder weights. |
+| `experiment/experiment200/decoder_192.pth` | **Active inference decoder** loaded by both Flask and Streamlit. |
+| `experiment/experiment200/args.txt` | Training arguments recorded for the `experiment200` run. |
+| `experiment/experiment1/decoder_126.pth` and `decoder_128.pth` | Earlier decoder checkpoints. |
+| `experiment/experiment1/optimizer_126.pth` and `optimizer_128.pth` | Matching optimizer states for the earlier checkpoints. |
 
-The Flask interface loads the VGG encoder and decoder when `app.py` is imported. The Streamlit interface loads and caches the same model resources when its app starts.
+**Checkpoint naming note:** the active file is `decoder_192.pth`. The accompanying `experiment200/args.txt` records a resumed run configured with `epochs: 200` and `start_epoch: 124`; the archive does not contain a `decoder_200.pth`. Both interfaces currently point to the available `decoder_192.pth` file.
 
-## Repository layout
+You do not need to retrain for each new style reference. The model calculates the style features at inference time and reuses the same decoder.
+
+## Repository structure
 
 ```text
 .
-├── app.py                         # Main Flask application
-├── train.py                       # Decoder training script
-├── requirements.txt               # Flask app / training dependencies
-├── Procfile                       # Gunicorn startup command
-├── .python-version                # Python 3.11.11
-├── vgg_normalised.pth             # VGG encoder weights
+├── app.py                          # Flask application, accounts, inference and history
+├── train.py                        # Decoder training and resume workflow
+├── requirements.txt                # Flask, training and model dependencies
+├── Procfile                        # Gunicorn startup command
+├── .python-version                 # Python 3.11.11
+├── vgg_normalised.pth              # VGG feature-encoder weights
 ├── experiment/
-│   └── experiment1/
-│       ├── decoder_128.pth        # Inference decoder checkpoint
-│       ├── optimizer_128.pth      # Optimizer checkpoint
-│       └── args.txt               # Recorded training parameters
+│   ├── experiment1/                # Earlier checkpoints and training arguments
+│   └── experiment200/              # Active decoder_192.pth and run arguments
+├── face_preservation/
+│   ├── face_parser.py              # MediaPipe/OpenCV face-mask generation
+│   └── blending.py                 # Feathered original/stylized image blending
 ├── utils/
-│   ├── models.py                  # VGGEncoder and Decoder modules
-│   └── utils.py                   # Dataset, transforms, AdaIN, feature statistics
-├── templates/                     # Flask HTML templates
-├── static/styles/                 # Preset styles, manifest, and thumbnails
-├── examples/                      # Sample content/style/output images
+│   ├── models.py                   # VGGEncoder and Decoder definitions
+│   └── utils.py                    # Dataset, transforms, AdaIN and statistics
+├── templates/                      # Flask pages: login, register, transfer, history, reset
+├── static/
+│   └── styles/
+│       ├── styles.json             # Preset style metadata
+│       ├── *.jpg                   # Full-size preset style images
+│       └── thumbs/                 # Gallery thumbnails
+├── examples/                       # Sample content, style and output images
 ├── streamlit_demo/
-│   ├── app.py                     # Streamlit interface
-│   ├── requirements.txt           # Streamlit demo dependencies
-│   └── README.md                  # Streamlit-specific notes
+│   ├── app.py                      # Streamlit interface
+│   ├── requirements.txt            # Streamlit demo dependencies
+│   └── README.md                   # Streamlit-specific setup
 ├── tools/
-│   └── generate_styles.py         # Generates the illustrated preset styles
-└── code.ipynb                     # Notebook / experimentation workflow
+│   └── generate_styles.py          # Preset-style and thumbnail generation
+└── code.ipynb                      # Notebook / experimentation workflow
 ```
 
 ## Requirements
 
-- Python **3.11** (the repository specifies `3.11.11` in `.python-version`).
-- pip and a virtual environment.
-- PyTorch and torchvision versions compatible with each other. The main requirements file pins `torch==2.2.2` and `torchvision==0.17.2`.
-- Optional: a supported NVIDIA GPU and compatible NVIDIA driver for CUDA acceleration. CPU inference is also supported, but can be slower.
+- **Python 3.11.11** (the version specified in `.python-version`).
+- pip and `venv`.
+- The root environment uses **PyTorch 2.2.2** and **torchvision 0.17.2**.
+- OpenCV and MediaPipe are included for face-mask generation. If face-preservation dependencies cannot be imported, the core style-transfer model can still run without that post-processing stage.
+- An NVIDIA GPU is optional. CPU inference is supported but may be slower. Training is substantially more practical on a GPU.
 
-## Run the Flask web application
+Use Python 3.11 for this pinned environment. Newer Python versions may not have compatible wheels for the pinned PyTorch release.
 
-The following commands are run from the project root—the directory containing `app.py` and `requirements.txt`.
+## Run the Flask application
 
-### 1. Create and activate a virtual environment
+Run these commands from the repository root (the folder containing `app.py` and `requirements.txt`).
+
+### 1. Create a virtual environment
 
 **Windows PowerShell**
 
@@ -199,7 +239,7 @@ py -3.11 -m venv .venv
 python -m pip install --upgrade pip
 ```
 
-If PowerShell blocks activation because of the local execution policy, use a permitted shell or activate the environment with the appropriate command for your machine. Do not change a system-wide policy unless you understand the implications.
+If PowerShell blocks activation, use a permitted shell or activate the environment using the appropriate command for your shell. You do not need to change a system-wide execution policy just to install the project.
 
 **Linux / macOS**
 
@@ -209,55 +249,49 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-### 2. Install PyTorch for your machine
+### 2. Install dependencies
 
-Run **one** of the following before installing the remaining requirements.
-
-**CPU-only**
+For a CPU-only environment, install the CPU wheels explicitly and then install the remaining project requirements:
 
 ```bash
 python -m pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cpu
-```
-
-**NVIDIA GPU (CUDA 12.1 wheel build)**
-
-```bash
-python -m pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
-```
-
-Use a PyTorch build compatible with your Python version and NVIDIA driver. The CUDA version shown by `nvidia-smi` is the maximum CUDA runtime supported by the installed driver; it does not by itself mean that the matching CUDA toolkit must be installed system-wide.
-
-### 3. Install project dependencies
-
-```bash
 python -m pip install -r requirements.txt
 ```
 
-Confirm that PyTorch imports and check whether CUDA is available:
+For an NVIDIA GPU, install the matching CUDA-enabled PyTorch pair first, then install the remaining project requirements:
+
+```bash
+python -m pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
+python -m pip install -r requirements.txt
+```
+
+The CUDA 12.1 wheel command is one available build for this pinned PyTorch version. Choose a compatible official PyTorch wheel for your operating system and driver. The CUDA version printed by `nvidia-smi` describes driver compatibility; it does not mean the full CUDA Toolkit must necessarily be installed separately.
+
+Check your installation:
 
 ```bash
 python -c "import torch, torchvision; print('torch:', torch.__version__); print('torchvision:', torchvision.__version__); print('CUDA available:', torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'Using CPU')"
 ```
 
-### 4. Configure the environment
+### 3. Configure Flask
 
-The Flask app requires `SECRET_KEY`. It loads a `.env` file from the project root when present. Generate a strong key with:
+The Flask app requires `SECRET_KEY`. Generate one with:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Create a file named `.env` in the project root:
+Create a `.env` file in the project root:
 
 ```dotenv
-SECRET_KEY=replace_this_with_the_generated_random_value
+SECRET_KEY=replace_with_the_generated_random_value
 APP_BASE_URL=http://127.0.0.1:5000
 
-# Leave DATABASE_URL unset for local SQLite at instance/app.db.
-# For PostgreSQL, use a URL such as:
+# Leave DATABASE_URL unset to use local SQLite at instance/app.db.
+# For PostgreSQL, use a connection URL such as:
 # DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DBNAME
 
-# Optional SMTP settings enable real password-reset email delivery:
+# Optional SMTP configuration for password-reset emails:
 # MAIL_SERVER=smtp.example.com
 # MAIL_PORT=587
 # MAIL_USE_TLS=1
@@ -267,29 +301,29 @@ APP_BASE_URL=http://127.0.0.1:5000
 # MAIL_FROM=StyleForge AI <no-reply@example.com>
 ```
 
-Keep `.env` private and do not commit secrets. The `.gitignore` already excludes `.env` files.
+Keep `.env` private. It is excluded by `.gitignore`; never commit real secrets or database credentials.
 
-**Database note:** the app reads `DATABASE_URL`. If it is not set, it creates/uses a local SQLite database at `instance/app.db` and logs a warning. For local development, that warning is informational. When using PostgreSQL, set `DATABASE_URL` to your database connection string; this app normalizes common `postgres://` and `postgresql://` URLs to use the `psycopg` v3 driver. Do not use `SQLALCHEMY_DATABASE_URI` as a substitute for the environment variable—the code configures that Flask-SQLAlchemy setting internally.
+**Database behaviour:** the app reads `DATABASE_URL`. If it is absent, the app creates/uses `instance/app.db` with SQLite and logs an informational warning. For PostgreSQL, set `DATABASE_URL`; common `postgres://` and `postgresql://` URLs are normalized to the `psycopg` v3 driver. The app configures `SQLALCHEMY_DATABASE_URI` internally, so set the environment variable `DATABASE_URL` rather than trying to set the Flask config key directly.
 
-On startup, the application creates its tables automatically while `AUTO_CREATE_DB` is unset or set to `1` (the default). For a production deployment, plan a controlled database schema migration strategy instead of relying indefinitely on automatic table creation.
+Database tables are created automatically on startup unless `AUTO_CREATE_DB=0`. Flask-Migrate is initialized in the application, but a production deployment should use an intentionally managed migration process and persistent database storage.
 
-**Password reset note:** without `MAIL_SERVER`, the app will log the reset email contents for development and will not actually send email. To enable email delivery, configure the SMTP variables above. Use `APP_BASE_URL` to set the public base URL used in links sent by email. Configure either TLS or SSL according to your mail provider; do not enable both at the same time.
+**Password-reset email:** without `MAIL_SERVER`, reset messages are written to the application log and are not sent. Configure the SMTP values and set `APP_BASE_URL` to the public application URL for deployed reset links. Use either STARTTLS or SSL, not both.
 
-### 5. Start Flask
+### 4. Start the application
 
 ```bash
 python app.py
 ```
 
-Open **http://127.0.0.1:5000** in your browser, register an account, then upload a content image and select or upload a style reference. In this app, both uploaded images together must be **under 10 MB**. Supported extensions are PNG, JPG, and JPEG.
+Open **http://127.0.0.1:5000**, register an account, then select a preset or upload a style reference and provide a content image.
 
-The Flask app resizes each inference image so its **longest side is at most 256 pixels**, preserving the aspect ratio to constrain memory use on smaller hosts. This keeps processing lightweight, but the generated output is not full camera resolution.
+The Flask interface limits the inference copy of each image to **256 pixels on its longest side** to reduce memory use. The original uploaded files are retained for the user's history/downloads, but the generated inference result is based on the resized image. The request upload limit is 10 MB.
 
 ## Run the Streamlit demo
 
-The Streamlit interface is an alternative front end; it does not use Flask login, Flask history, or the Flask database. It processes the images for the current session and does not persist uploaded images in the application database.
+The Streamlit interface is independent of Flask. It does not use Flask accounts, the Flask database, or the persistent Flask history workflow.
 
-For a clean environment, create a separate virtual environment from the repository root.
+For a clean setup, create a separate environment from the project root.
 
 **Windows PowerShell**
 
@@ -311,182 +345,240 @@ python -m pip install -r streamlit_demo/requirements.txt
 streamlit run streamlit_demo/app.py
 ```
 
-Open the local URL printed by Streamlit in the terminal. The Streamlit requirements file is configured for CPU-only PyTorch wheels by default. If you want to use CUDA in this separate environment, install the appropriate CUDA-enabled PyTorch/torchvision pair for your platform and check the result before launching the app.
+The Streamlit requirements file configures CPU-only PyTorch wheels by default. For CUDA, install a compatible CUDA-enabled PyTorch/torchvision pair in this environment before launching the app.
 
-The demo supports a processing size of **256, 384, or 512 pixels on the longest side**, with a combined upload limit of 10 MB. A larger processing size can preserve more detail but takes more time and memory.
+The demo allows processing sizes of **256, 384, or 512 pixels** on the longest side, preserving aspect ratio. The combined content and style upload limit is 10 MB. Larger processing sizes can retain more detail but require more memory and processing time.
+
+### Deploy the Streamlit demo
+
+The repository is structured for Streamlit Community Cloud deployment:
+
+1. Push the project, including the model weights and `static/styles/` assets, to GitHub.
+2. Create a Streamlit app from the repository.
+3. Set the main file to `streamlit_demo/app.py`.
+4. Use Python 3.11 and the dependency file `streamlit_demo/requirements.txt`.
+
+The application expects the model weights at the paths already defined in `streamlit_demo/app.py`, relative to the repository root. Do not remove `vgg_normalised.pth`, `experiment/experiment200/decoder_192.pth`, `static/styles/`, or `examples/` from the deployed project.
+
+Live app: **[StyleForge AI on Streamlit](https://adain-neural-style-transfer-39tfl8u4t9pp9vbieaksv6.streamlit.app/)**
+
+## Flask routes
+
+The Flask application is server-rendered with an AJAX-enhanced transfer form; it is not a standalone public REST API.
+
+| Route | Access | Purpose |
+|---|---|---|
+| `/register` | Public | Create an account. |
+| `/login` | Public | Sign in. |
+| `/forgot-password` | Public | Request a password-reset link. |
+| `/reset-password/<token>` | Public; valid signed token required | Set a new password. |
+| `/` | Login required | Upload/select content and style images and run inference. |
+| `/uploads/<filename>` | Login required; current-user file only | Serve an image from the signed-in user's upload directory. |
+| `/history` | Login required | Browse, search, sort, and filter saved transfers. |
+| `/history/<transfer_id>/delete` | Login required; POST | Delete a transfer and images no longer referenced by another transfer. |
+| `/logout` | Login required; POST | End the session. |
+| `/examples/<path:filename>` | Public | Serve bundled example images. |
+
+Authentication and password-reset POST routes have rate limits. Forms use Flask-WTF CSRF protection. See `app.py` for the precise limits and implementation.
 
 ## Add or regenerate preset styles
 
-The preset gallery is read from `static/styles/styles.json`. Image files placed directly in `static/styles/` with a `.jpg`, `.jpeg`, or `.png` extension are also discovered automatically and shown under the fallback **More** category if they are not listed in the manifest. Place optional thumbnails in `static/styles/thumbs/` using the same filename. To edit a preset's name, category, or description, update its entry in `styles.json`.
+The style library is driven by `static/styles/styles.json`. Each entry contains an `id`, `name`, `category`, `description`, and image `file`.
 
-The bundled `tools/generate_styles.py` script can regenerate the illustrated presets and their thumbnails. Run it from the project root in an environment with the project's Pillow and NumPy dependencies installed:
+To add a style manually:
+
+1. Add a `.jpg`, `.jpeg`, or `.png` image to `static/styles/`.
+2. Add its metadata to `styles.json` if you want a custom display name, category, and description.
+3. Optionally add a thumbnail with the same filename to `static/styles/thumbs/`.
+
+Images that are not listed in the manifest are discovered automatically and placed in the **More** category. To regenerate the bundled illustrated presets and thumbnails, run:
 
 ```bash
 python tools/generate_styles.py
 ```
 
-## Training the decoder (optional)
+Run the script from the project root in an environment with the project's Pillow and NumPy dependencies installed.
 
-Training is **not required** to run either interface with the included checkpoints. Use `train.py` only if you want to train a new decoder or continue an experiment.
+## Train or resume the decoder (optional)
+
+Training is **not required** to run either interface. Use `train.py` only when you want to train a new decoder or continue a compatible training run. Training datasets are not included in this repository.
 
 ### Dataset layout
 
-`ImageFolderdataset` reads image files directly inside each directory; it does not recursively scan subdirectories. Arrange your images like this:
+`ImageFolderdataset` reads supported image files directly from each folder; it does not recursively scan subfolders.
 
 ```text
-data/
-├── content/
-│   ├── content_001.jpg
-│   ├── content_002.jpg
-│   └── ...
-└── style/
-    ├── style_001.jpg
-    ├── style_002.jpg
-    └── ...
+ data/
+ ├── content/
+ │   ├── content_001.jpg
+ │   ├── content_002.jpg
+ │   └── ...
+ └── style/
+     ├── style_001.jpg
+     ├── style_002.jpg
+     └── ...
 ```
 
-Use supported image files (`.jpg`, `.jpeg`, `.png`). Both folders must contain enough images to produce at least one complete batch because the training data loaders use `drop_last=True`.
+Supported formats are `.jpg`, `.jpeg`, and `.png`. Each dataset must contain at least one complete batch because the data loaders use `drop_last=True`.
 
-### Start a new training run
+### Start a new experiment
 
-Some defaults in `train.py` point to a developer-specific Windows path. Always provide your own dataset and VGG paths rather than relying on those defaults.
+Some defaults in `train.py` are developer-specific Windows paths. Always pass your own dataset and VGG paths.
 
 ```bash
-python train.py --content_dir "data/content" --style_dir "data/style" --vgg "vgg_normalised.pth" --experiment "experiment2" --batch_size 4 --epochs 200
+python train.py \
+  --content_dir "data/content" \
+  --style_dir "data/style" \
+  --vgg "vgg_normalised.pth" \
+  --experiment "experiment2" \
+  --batch_size 4 \
+  --epochs 200
 ```
 
-This command uses the script's defaults for image transforms and loss weights, while saving the new experiment under `experiment/experiment2/`. A batch size of 4 is a cautious starting point for a GPU with limited VRAM; adjust it according to available memory. CPU training is supported but can be substantially slower.
+This example writes to `experiment/experiment2/`. Batch size `4` is a conservative starting point for a GPU with limited VRAM; increase it only when memory allows. The script defaults to batch size `16`, final crop size `256`, content/style resize size `512`, learning rate `1e-4`, content weight `1.0`, style weight `5.0`, and checkpoint saves every two epochs.
 
-Important training behaviour:
+### Resume from a checkpoint
 
-- The VGG encoder is frozen; the decoder is optimized with Adam.
-- The script combines a content reconstruction loss with a style-statistics loss based on feature means and standard deviations.
-- Checkpoints and training preview images are saved every `--save_interval` epochs (default: every 2 epochs).
-- The script writes periodic files named `decoder_<epoch>.pth`, `optimizer_<epoch>.pth`, and `output_<epoch>.png`, along with `args.txt`.
-- The script saves periodic checkpoints; it does not evaluate a validation set or automatically select a best checkpoint.
-
-### Resume an experiment
-
-Supply matching decoder and optimizer files from the experiment you want to continue:
+Use a matching decoder and optimizer checkpoint from the same epoch. For example, the archive includes `decoder_128.pth` and `optimizer_128.pth` in `experiment/experiment1/`:
 
 ```bash
-python train.py --content_dir "data/content" --style_dir "data/style" --vgg "vgg_normalised.pth" --experiment "experiment2" --resume --decoder_path "experiment/experiment2/decoder_100.pth" --optimizer_path "experiment/experiment2/optimizer_100.pth"
+python train.py \
+  --content_dir "data/content" \
+  --style_dir "data/style" \
+  --vgg "vgg_normalised.pth" \
+  --experiment "experiment2" \
+  --resume \
+  --start_epoch 128 \
+  --epochs 200 \
+  --decoder_path "experiment/experiment1/decoder_128.pth" \
+  --optimizer_path "experiment/experiment1/optimizer_128.pth"
 ```
 
-The training script restores the decoder and optimizer weights, but it does not save/restore the learning-rate scheduler state, so a resumed run restarts the scheduler from its initial epoch state.
+`--start_epoch` is the number of epochs already completed; set it to match the checkpoint filename. `--epochs` is the target total epoch count, not the number of additional epochs. The training code restores the decoder and optimizer state, but it does not restore a saved scheduler state, so the learning-rate schedule is not an exact continuation of the original run.
 
-### Use a newly trained decoder in the app
+### Checkpoint outputs and using a newly trained decoder
 
-Both interfaces currently point to `experiment/experiment1/decoder_128.pth`:
+At the configured save interval, the script writes:
 
-- **Flask:** update the `torch.load(...)` path near the model initialization in `app.py`.
-- **Streamlit:** update `DECODER_PATH` near the top of `streamlit_demo/app.py`.
+- `decoder_<epoch>.pth` — decoder weights;
+- `optimizer_<epoch>.pth` — optimizer state;
+- `output_<epoch>.png` — a training preview;
+- `args.txt` — the run configuration.
 
-Point the relevant interface to the new experiment's decoder checkpoint and restart the application. Keep `vgg_normalised.pth` available at the path expected by the app.
+The script saves periodic checkpoints; it does not evaluate a validation set or automatically select the best checkpoint.
 
-## Deployment notes
+To use a new decoder in the web apps, update the path in **both** places and restart the application:
 
-The root `Procfile` starts the Flask application with Gunicorn:
+- Flask: model-loading section in `app.py`.
+- Streamlit: `DECODER_PATH` near the top of `streamlit_demo/app.py`.
+
+Both currently load `experiment/experiment200/decoder_192.pth`. Keep the matching `vgg_normalised.pth` available as well.
+
+## Deployment notes for Flask
+
+The root `Procfile` starts Flask using Gunicorn:
 
 ```text
 web: gunicorn --bind :$PORT --workers 1 --threads 1 --timeout 180 app:app
 ```
 
-For a Linux-based host that supports a `Procfile`, configure at least:
+Configure these values in your hosting provider's environment settings:
 
-- `SECRET_KEY` — a unique, strong secret.
+- `SECRET_KEY` — unique, random secret; required.
 - `DATABASE_URL` — recommended for a managed PostgreSQL database in production.
-- SMTP variables if password-reset emails should be delivered.
-- The model weights and `static/styles/` assets must be included in the deployed build.
+- SMTP variables — required only if password-reset emails should be delivered.
+- Include both model weight files and the `static/styles/` assets in the deployed build.
 
 Operational considerations:
 
-- **Persistent files:** Flask uploads and generated images are stored under `instance/user_uploads/`, while the SQLite database is under `instance/app.db`. Ephemeral hosting filesystems can lose these between deploys or restarts. Use persistent storage or move user files to an external object store before depending on long-term history.
-- **Database:** the built-in SQLite fallback is convenient for local development, not a substitute for a managed/persistent production database.
-- **Memory:** the model is loaded into each Python worker process. Start with the single-worker command in the `Procfile`; adding workers or replicas increases model memory use.
-- **Rate limits:** the default limiter store is in memory. If running multiple workers or instances, configure a shared backend such as Redis with `RATELIMIT_STORAGE_URI`.
-- **Proxy:** set `TRUSTED_PROXY=1` only when the deployment is actually behind exactly one trusted proxy, as described in the comments in `app.py`.
-- **HTTPS and secrets:** terminate HTTPS at your hosting provider or trusted reverse proxy, keep secrets in the provider's secret/environment settings, and never put credentials in source control.
+- **Persistent storage:** user uploads and generated images are stored under `instance/user_uploads/`; the SQLite database is under `instance/app.db`. An ephemeral filesystem can lose these files on redeploy or restart. Use persistent storage or external object storage for user files, and a persistent database for account/history records.
+- **Memory:** each Gunicorn worker loads the VGG encoder and decoder into its own process. Keep the single-worker setup unless the host has enough memory for additional model copies. The 256-pixel Flask inference cap reduces processing memory but does not eliminate model-loading overhead.
+- **Rate-limit storage:** the default limiter store is in memory. Use a shared store such as Redis through `RATELIMIT_STORAGE_URI` when running multiple workers or instances.
+- **Reverse proxy:** set `TRUSTED_PROXY=1` only when the app is behind exactly one trusted proxy, as expected by the `ProxyFix` configuration.
+- **Secrets and HTTPS:** store credentials in the hosting provider's secret manager, terminate HTTPS at the provider or a trusted reverse proxy, and never commit secrets.
 
-## Useful environment variables
+## Environment variables
 
-| Variable | Default / required | Purpose |
+| Variable | Default / requirement | Purpose |
 |---|---|---|
 | `SECRET_KEY` | **Required** | Flask session signing and password-reset tokens. |
-| `DATABASE_URL` | Local SQLite if unset | SQLAlchemy database URL; use PostgreSQL for a persistent production database. |
+| `DATABASE_URL` | Local SQLite if unset | SQLAlchemy database URL; PostgreSQL is recommended for persistent production use. |
 | `APP_BASE_URL` | Empty | Public base URL used to construct password-reset links. |
 | `RESET_TOKEN_MAX_AGE` | `3600` seconds | Password-reset token lifetime. |
-| `MAIL_SERVER` | Unset | SMTP server; without it, reset email is logged rather than sent. |
+| `MAIL_SERVER` | Unset | SMTP server; without it, reset messages are logged and not sent. |
 | `MAIL_PORT` | `587` | SMTP port. |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | Unset | Optional SMTP authentication credentials. |
-| `MAIL_USE_TLS` | `1` | Enable STARTTLS unless SSL mode is used. |
-| `MAIL_USE_SSL` | `0` | Use implicit SMTP-over-SSL when set to `1`. |
-| `MAIL_FROM` | Username or a local fallback | Sender address for application emails. |
-| `RATELIMIT_STORAGE_URI` | `memory://` | Flask-Limiter storage URI; use shared Redis for multiple instances. |
-| `TRUSTED_PROXY` | `0` | Trust forwarding headers from exactly one configured proxy when set to `1`. |
-| `AUTO_CREATE_DB` | `1` | Call `db.create_all()` during application startup when enabled. |
-| `FLASK_DEBUG` | `0` | Enables Flask debug mode when running `python app.py`; keep off in production. |
+| `MAIL_USE_TLS` | `1` | Enables STARTTLS unless SSL mode is selected. |
+| `MAIL_USE_SSL` | `0` | Enables implicit SMTP-over-SSL when set to `1`. |
+| `MAIL_FROM` | Username or local fallback | Sender address for application emails. |
+| `RATELIMIT_STORAGE_URI` | `memory://` | Flask-Limiter storage; use a shared store for multiple instances. |
+| `TRUSTED_PROXY` | `0` | Trust forwarding headers from one configured proxy when set to `1`. |
+| `AUTO_CREATE_DB` | `1` | Calls `db.create_all()` during startup when enabled. |
+| `FLASK_DEBUG` | `0` | Enables Flask debug mode when running `python app.py`; keep disabled in production. |
 
 ## Troubleshooting
 
 ### `RuntimeError: Set SECRET_KEY in your .env file.`
 
-Create `.env` in the same directory as `app.py`, set `SECRET_KEY`, and restart the process. Ensure the file is named `.env`, not `.env.txt`.
+Create `.env` beside `app.py`, set a strong `SECRET_KEY`, and restart the process. Confirm the file is named `.env`, not `.env.txt`.
 
 ### `DATABASE_URL not set; using local SQLite database.`
 
-This is an informational warning from the current application. It means the app is falling back to `instance/app.db`. Set `DATABASE_URL` if you intended to use PostgreSQL.
+This is an informational warning. The application is using `instance/app.db`. Set `DATABASE_URL` if you intended to connect to PostgreSQL.
 
 ### `torch.cuda.is_available()` is `False`
 
-The app can still run on CPU. If you expected CUDA, confirm that the correct NVIDIA GPU build of PyTorch is installed in the active virtual environment and that the driver supports it. Check the printed `torch` and `torchvision` versions together; mismatched versions can cause import/runtime errors.
+The application can run on CPU. If you expected GPU acceleration, verify that the active environment has a CUDA-enabled PyTorch build and a compatible NVIDIA driver. Check the PyTorch and torchvision versions together.
 
-### `torchvision::nms does not exist` or DLL/import errors
+### `torchvision::nms does not exist` or native DLL/import errors
 
-This commonly points to incompatible or mixed PyTorch/torchvision installations. In a clean virtual environment, reinstall the matching pair specified for this project (`torch==2.2.2` and `torchvision==0.17.2`) from the same official PyTorch wheel index. On managed Windows machines, an application-control policy may independently block native DLLs; changing PyTorch versions will not necessarily override such a policy.
+This often indicates incompatible or mixed PyTorch and torchvision installations. Recreate the virtual environment and install the matching pair specified for this project (`torch==2.2.2` and `torchvision==0.17.2`). On managed Windows machines, application-control policies may separately block native DLLs; changing package versions may not resolve that policy restriction.
 
-### The app cannot find a model file
+### The application cannot find a model checkpoint
 
-Check that both files exist at the paths used by the interface:
+Check that both of these files exist relative to the repository root:
 
-- `vgg_normalised.pth`
-- `experiment/experiment1/decoder_128.pth`
+```text
+vgg_normalised.pth
+experiment/experiment200/decoder_192.pth
+```
 
-Run the app from the repository's expected layout, or update the model paths in the Python files when you relocate the checkpoints.
+The current paths are defined in `app.py` and `streamlit_demo/app.py`. Update those paths if you move the checkpoint files.
 
-### Password reset does not arrive by email
+### Password-reset email does not arrive
 
-If `MAIL_SERVER` is unset, the app deliberately does not send email; it logs the message instead. Configure the SMTP values and `APP_BASE_URL`, then check the application logs and your provider's SMTP requirements.
+Without `MAIL_SERVER`, the app logs the reset message but does not send it. Configure SMTP values and `APP_BASE_URL`, then inspect application logs and your email provider's SMTP requirements.
 
-### The output looks too abstract or facial details are lost
+### The face is not preserved
 
-AdaIN transfers statistics across feature maps; it is not a face-aware restoration model. Try a lower style strength, a less busy style reference, and a sharp, well-lit content image. Lower processing sizes are faster but retain less fine detail.
+Face blending only runs when the face-preservation modules load and a face mask is detected. Ensure OpenCV is installed; MediaPipe is attempted first, with an OpenCV Haar-cascade fallback. Use a clear, front-facing image with the face visible. If the detector returns no mask, the app uses the unblended stylized output.
 
-## Limitations and privacy notes
+### The output looks too abstract or loses detail
 
-- This is neural style transfer, not a semantic image editor. It does not understand object boundaries or preserve every facial feature.
-- The Flask interface intentionally downsizes inference inputs for memory efficiency. The result is not a full-resolution export.
-- The Streamlit demo does not provide user accounts or a persistent history. Its uploads/results are handled for the active session and are not used to train the model.
-- The Flask app stores uploads and outputs on the server under per-user directories. Protect the host, configure persistent storage deliberately, and review your data-retention needs before exposing it publicly.
-- Training data is not bundled as part of this application workflow. Provide your own content/style datasets if you choose to train.
+Try reducing `alpha`, using a less busy style reference, or increasing the Streamlit processing size. The Flask app is intentionally capped at 256 pixels on the longest side. AdaIN transfers feature statistics and is not a semantic image editor or face-restoration model.
+
+## Limitations, privacy, and licensing
+
+- Neural style transfer does not understand object boundaries or guarantee preservation of every facial feature.
+- Face preservation blends pixels from the resized original face region; it is not a learned identity-preservation model.
+- Flask stores uploaded images and outputs on the server in per-user directories. Configure storage, access controls, backups, and retention appropriately before exposing the application publicly.
+- Streamlit does not provide accounts or persistent history; uploaded content is used for the active inference session and is not written to the Flask database.
+- Training datasets are not bundled. Supply your own content and style folders if you train a decoder.
+- No project-level `LICENSE` file is included in this archive. Add a license before inviting external reuse or contributions. Separately check the applicable licenses and rights for the VGG weights, decoder checkpoint, bundled sample images, preset style images, and third-party assets. A source-code license does not automatically cover model weights or image assets.
 
 ## Reference
 
-The method is based on the following paper:
+The method is based on:
 
 > Xun Huang and Serge Belongie. **“Arbitrary Style Transfer in Real-Time With Adaptive Instance Normalization.”** Proceedings of the IEEE International Conference on Computer Vision (ICCV), 2017.
->
-> Paper: https://openaccess.thecvf.com/content_iccv_2017/html/Huang_Arbitrary_Style_Transfer_ICCV_2017_paper.html  
-> arXiv: https://arxiv.org/abs/1703.06868
+
+- Paper: <https://openaccess.thecvf.com/content_iccv_2017/html/Huang_Arbitrary_Style_Transfer_ICCV_2017_paper.html>
+- arXiv: <https://arxiv.org/abs/1703.06868>
 
 Please cite the original paper when using this method in academic work.
-
-## License and asset attribution
-
-No project-level `LICENSE` file was present in the supplied repository archive. Add an explicit license before inviting external reuse or contributions. Separately verify the applicable licenses and usage rights for the pretrained VGG weights, decoder checkpoint, sample images, preset style images, and any third-party assets. A license for the source code does not automatically grant rights to every bundled image or model weight.
 
 ---
 
 <div align="center">
-Built with PyTorch, Flask, Streamlit, and Adaptive Instance Normalization.
+Built with PyTorch, VGG-19, Flask, Streamlit, and Adaptive Instance Normalization.
 </div>
